@@ -1,0 +1,112 @@
+{
+    "name": "Test Printer",
+    "version": 2,
+    "inherits": "fdmprinter",
+    "metadata": {
+        "visible": true,
+        "author": "Paul Maurer",
+        "manufacturer": "None",
+        "file_formats": "text/x-gcode",
+        "preferred_quality": "*Draft*"
+    },
+    "overrides": {
+        "machine_width": {
+            "default_value": 300
+        },
+        "machine_height": {
+            "default_value": 300
+        },
+        "machine_depth": {
+            "default_value": 220
+        },
+        "machine_head_polygon": {
+            "default_value": [
+                [-30, 34],
+                [-30, -32],
+                [30, -32],
+                [30, 34]
+            ]
+        },
+        "material_diameter": {
+            "default_value": 1.75
+        },
+        "machine_nozzle_size": {
+            "default_value": 0.4
+        },
+        "layer_height_0": {
+            "default_value": 0.2
+        },
+        "retraction_enable": {
+            "default_value": true
+        },
+        "retraction_amount": {
+            "default_value": 5
+        },
+        "cool_min_layer_time": {
+            "default_value": 10
+        },
+        "adhesion_type": {
+            "default_value": "skirt"
+        },
+        "skirt_line_count": {
+            "default_value": 4
+        },
+        "machine_start_gcode": {
+            "default_value": "G28\nE0"
+        },
+        "machine_end_gcode": {
+            "default_value": "G91\nG1 F1800 E-3\nG1 F3000 Z10\nG90\nM84"
+        },
+        "machine_heated_bed": {
+            "default_value": true
+        },
+        "machine_max_feedrate_x": {
+	    "default_value": 500
+	},
+        "machine_max_feedrate_y": {
+	    "default_value": 500
+	},
+        "machine_max_feedrate_z": {
+	    "default_value": 15
+	},
+        "machine_max_feedrate_e": {
+	    "default_value": 25
+	},
+	"machine_max_acceleration_x": {
+	    "default_value": 1000
+	},
+	"machine_max_acceleration_y": {
+	    "default_value": 1000
+	},
+	"machine_max_acceleration_z": {
+	    "default_value": 100
+	},
+	"machine_max_acceleration_e": {
+	    "default_value": 5000
+	},
+        "machine_max_jerk_xy": {
+	    "default_value": 10
+	},
+        "machine_max_jerk_z": {
+	    "default_value": 0.4
+	},
+        "machine_max_jerk_e": {
+	    "default_value": 5.0
+	},
+        "gantry_height": {
+            "default_value": 30
+        },
+        "acceleration_enabled": {
+            "default_value": true
+        },
+        "acceleration_travel": {
+            "default_value": 500
+        },
+        "jerk_enabled": {
+            "default_value": true
+        },
+        "jerk_travel": {
+            "default_value": 10
+        }
+    }
+}
