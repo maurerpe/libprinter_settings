@@ -49,7 +49,7 @@ static int WriteStr(HANDLE fd, const char *str) {
 
   len = strlen(str);
   while (len > 0) {
-    if (!WriteFile(fd, str, MIN(len, DWORD_MAX), &count, NULL))
+    if (!WriteFile(fd, str, MIN(len, DWORD_MAX), &count, NULL)) {
       fprintf(stderr, "Cannot write to pipe\n");
       return -1;
     }
@@ -103,7 +103,7 @@ static int SetSearchEnv(const struct ps_value_t *search) {
 #ifdef DEBUG
   fprintf(stderr, "Setting " PS_ENV_VAR "=%s\n", PS_OStreamContents(os));
 #endif
-  if (!SetEnvironmentVariable(PS_ENV_VAR, PS_OStreamContents(os)))
+  if (!SetEnvironmentVariable(PS_ENV_VAR, PS_OStreamContents(os))) {
     fprintf(stderr, "Could not set " PS_ENV_VAR " environment variable\n");
     goto err3;
   }
@@ -124,8 +124,9 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   SECURITY_ATTRIBUTES saAttr;
   HANDLE in_pipe_rd, in_pipe_wr, out_pipe_rd, out_pipe_wr;
   PROCESS_INFORMATION proc_info;
-  STARTUPINFO start_info;
-  struct ps_ostream_t *cmdline;
+  STARTUPINFO startup_info;
+  struct ps_ostream_t *os;
+  char *cmdline;
   int init;
   
   saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -155,62 +156,68 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   memset(&proc_info, 0, sizeof(proc_info));
   memset(&startup_info, 0, sizeof(startup_info));
 
-  startup_info.cp = sizeof(STARTUP_INFO);
-  startup_info.hStdError = STDERR;
+  startup_info.cb = sizeof(STARTUPINFO);
+  startup_info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
   startup_info.hStdOutput = out_pipe_wr;
   startup_info.hStdInput = in_pipe_rd;
   startup_info.dwFlags |= STARTF_USESTDHANDLES;
   
-  if ((cmdline = PS_NewStrOStream()) == NULL)
+  if ((os = PS_NewStrOStream()) == NULL)
     goto err3;
   
   init = 0;
-  if (PS_WriteStr(cmdline, "\"") < 0)
+  if (PS_WriteStr(os, "\"") < 0)
     goto err4;
   while (*args) {
-    if (init && PS_WriteStr(cmdline, "\" \"") < 0)
+    if (init && PS_WriteStr(os, "\" \"") < 0)
       goto err4;
     init = 1;
-    if (PS_WriteStr(cmdline, *args) < 0)
+    if (PS_WriteStr(os, *args) < 0)
       goto err4;
   }
-  if (PS_WriteStr(cmdline, "\"") < 0)
+  if (PS_WriteStr(os, "\"") < 0)
     goto err4;
 
   if (SetSearchEnv(search) < 0)
     goto err4;
   
-  if (!CreateProcess("CuraEngine", PS_OStreamContents(cmdline), NULL, NULL, TRUE, 0, NULL, NULL, &startup_info, &proc_info)) {
+  if ((cmdline = strdup(PS_OStreamContents(os))) == NULL)
+    goto err5;
+  
+  if (!CreateProcess("CuraEngine", cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &startup_info, &proc_info)) {
     fprintf(stderr, "Could not create child process\n");
-    goto err4;
+    goto err5;
   }
 
-  PS_FreeOStream(cmdline);
+  free(cmdline);
+  PS_FreeOStream(os);
   CloseHandle(proc_info.hThread);
   CloseHandle(out_pipe_wr);
   CloseHandle(in_pipe_rd);
   
-  if (str && WriteStr(in_pipe_wr, str) < 0)
-    goto err6;
+  if (stdin_str && WriteStr(in_pipe_wr, stdin_str) < 0)
+    goto err7;
   CloseHandle(in_pipe_wr);
 
-  if (ReadToStream(out_pipe_rd, gcode) < 0)
-    goto err5;
+  if (ReadToStream(out_pipe_rd, stdout_os) < 0)
+    goto err6;
   
   WaitForSingleObject(proc_info.hProcess, INFINITE);
   CloseHandle(proc_info.hProcess);
   return 0;
 
- err6:
+ err7:
   CloseHandle(in_pipe_wr);
- err5:
+ err6:
   CloseHandle(out_pipe_rd);
   WaitForSingleObject(proc_info.hProcess, INFINITE);
   CloseHandle(proc_info.hProcess);
   return -1;
 
+ err5:
+  free(cmdline);
  err4:
-  PS_FreeOStream(cmdline);
+  PS_FreeOStream(os);
  err3:
   CloseHandle(out_pipe_rd);
   CloseHandle(out_pipe_wr);

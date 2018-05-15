@@ -54,8 +54,14 @@ struct buffer {
 
 static struct ps_value_t *ParseValue(struct buffer *buf);
 
+#ifdef WIN32
+#define PSIZE "I"
+#else
+#define PSIZE "z"
+#endif
+
 #define PRINT_ERR \
-  fprintf(stderr, "Error parsing json at %zu:%zu\n", buf->line + 1, buf->loc - buf->line_start)
+  fprintf(stderr, "Error parsing json at %" PSIZE "u:%" PSIZE "u\n", buf->line + 1, buf->loc - buf->line_start)
 
 static size_t FillBuf(struct buffer *buf) {
   size_t num;

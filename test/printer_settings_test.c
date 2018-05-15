@@ -37,6 +37,12 @@
 #include "ps_ostream.h"
 #include "ps_slice.h"
 
+#ifdef WIN32
+#define PSIZE "I"
+#else
+#define PSIZE "z"
+#endif
+
 int main(void) {
   struct ps_value_t *ps, *search, *ext, *set;
   struct ps_ostream_t *os;
@@ -56,7 +62,7 @@ int main(void) {
 
   if ((ext = PS_ListExtruders(ps)) == NULL)
     exit(1);
-  printf("Num extruders = %zu: ", PS_ItemCount(ext) - 1);
+  printf("Num extruders = %" PSIZE "u: ", PS_ItemCount(ext) - 1);
   PS_WriteValue(os, ext);
   printf("\n");
   

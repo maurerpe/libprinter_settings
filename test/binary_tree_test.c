@@ -67,9 +67,9 @@ int main(void) {
     puts(BinaryTreeIteratorKey(bti));
   }
 
-  srandom(3092);
+  srand(3092);
   for (count = 0; count < 10000; count++) {
-    snprintf(buf, sizeof(buf), "%08lX", random());
+    snprintf(buf, sizeof(buf), "%08X", rand());
     
     if (BinaryTreeInsert(bt, buf, NULL) < 0) {
       fprintf(stderr, "Cannot insert %s\n", buf);
