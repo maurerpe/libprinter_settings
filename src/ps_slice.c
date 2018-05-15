@@ -33,15 +33,13 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <errno.h>
 #include <string.h>
 
 #include "printer_settings.h"
 #include "printer_settings_internal.h"
 #include "ps_context.h"
 #include "ps_slice.h"
+#include "ps_exec.h"
 
 struct args_t {
   char **a;
@@ -190,162 +188,6 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
   return -1;
 }
 
-static int WriteStr(int fd, const char *str) {
-  size_t len;
-  ssize_t count;
-
-  len = strlen(str);
-  while (len > 0) {
-    if ((count = write(fd, str, len)) < 0) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-	continue;
-      return -1;
-    }
-
-    str += count;
-    len -= count;
-  }
-  
-  return 0;
-}
-
-static int ReadToStream(int fd, struct ps_ostream_t *os) {
-  char buf[4096];
-  ssize_t count;
-  
-  while (1) {
-    if ((count = read(fd, buf, sizeof(buf))) < 0) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-	continue;
-      return -1;
-    }
-    
-    if (count == 0)
-      return 0;
-    
-    if (PS_WriteBuf(os, buf, count) < 0)
-      return -1;
-  }
-}
-
-#define ENV_VAR "CURA_ENGINE_SEARCH_PATH"
-
-static int SetSearchEnv(const struct ps_value_t *search) {
-  struct ps_ostream_t *os;
-  struct ps_value_iterator_t *vi;
-  int is_first;
-  
-  if ((os = PS_NewStrOStream()) == NULL)
-    goto err;
-  
-  if ((vi = PS_NewValueIterator(search)) == NULL)
-    goto err2;
-
-  is_first = 1;
-  while (PS_ValueIteratorNext(vi)) {
-    if (!is_first && PS_WriteChar(os, ':') < 0)
-	goto err3;
-    is_first = 0;
-    
-    if (PS_WriteStr(os, PS_GetString(PS_ValueIteratorData(vi))) < 0)
-      goto err3;
-  }
-
-#ifdef DEBUG
-  fprintf(stderr, "Setting " ENV_VAR "=%s\n", PS_OStreamContents(os));
-#endif
-  if (setenv(ENV_VAR, PS_OStreamContents(os), 1) < 0) {
-    perror("Could not set " ENV_VAR " environment variable");
-    goto err3;
-  }
-  
-  PS_FreeValueIterator(vi);
-  PS_FreeOStream(os);
-  return 0;
-  
- err3:
-  PS_FreeValueIterator(vi);
- err2:
-  PS_FreeOStream(os);
- err:
-  return -1;
-}
-
-static int ExecArgs(struct args_t *args, const char *stdin_str, struct ps_ostream_t *stdout_os, const struct ps_value_t *search) {
-  int in_pipe[2], out_pipe[2], status;
-  pid_t pid;
-
-#ifdef DEBUG
-  PrintArgs(args);
-#endif
-  
-  if (pipe(in_pipe) < 0)
-    goto err;
-
-  if (pipe(out_pipe) < 0)
-    goto err2;
-  
-  switch ((pid = fork())) {
-  case -1:
-    goto err3;
-    
-  case 0:
-    /* Child */
-    close(in_pipe[1]);
-    close(out_pipe[0]);
-    if (dup2(in_pipe[0], 0) < 0) {
-      perror("Cannot set pipe to stdin");
-      exit(1);
-    }
-    if (dup2(out_pipe[1], 1) < 0) {
-      perror("Cannot set pipe to stdout");
-      exit(1);
-    }
-    if (SetSearchEnv(search) < 0)
-      exit(1);
-    
-    execvp("CuraEngine", args->a);
-    perror("Could not exec CuraEngine");
-    exit(1);
-    
-  default:
-    /* Parent */
-    close(in_pipe[0]);
-    close(out_pipe[1]);
-
-    if (stdin_str && WriteStr(in_pipe[1], stdin_str) < 0)
-      goto err5;
-    
-    close(in_pipe[1]);
-
-    if (stdout_os && ReadToStream(out_pipe[0], stdout_os) < 0)
-      goto err4;
-    
-    close(out_pipe[0]);
-    waitpid(pid, &status, 0);
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-      return -1;
-    
-    return 0;
-  }
-  
- err5:
-  close(in_pipe[1]);
- err4:
-  close(out_pipe[0]);
-  waitpid(pid, NULL, 0);
-  return -1;
-  
- err3:
-  close(out_pipe[0]);
-  close(out_pipe[1]);
- err2:
-  close(in_pipe[0]);
-  close(in_pipe[1]);
- err:
-  return -1;
-}
-
 static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file, const char *model_str) {
   struct ps_value_t *dflt;
   struct ps_context_t *ctx;
@@ -369,7 +211,11 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
   if (BuildArgs(&args, PS_GetPrinter(ps), PS_CtxGetValues(ctx), model_file) < 0)
     goto err4;
   
-  if (ExecArgs(&args, model_str, gcode, PS_GetSearch(ps)) < 0)
+#ifdef DEBUG
+  PrintArgs(args);
+#endif
+  
+  if (PS_ExecArgs(args.a, model_str, gcode, PS_GetSearch(ps)) < 0)
     goto err4;
   
   return 0;

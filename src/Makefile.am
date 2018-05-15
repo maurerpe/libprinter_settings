@@ -31,7 +31,7 @@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = libprinter_settings.la
-libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c ps_stack.c ps_slice.c printer_settings.c
+libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c ps_stack.c ps_slice.c ps_exec_posix.c ps_exec_win.c printer_settings.c
 libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_'
 
 noinst_LTLIBRARIES = libbinary_tree.la

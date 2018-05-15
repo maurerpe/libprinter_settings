@@ -170,7 +170,8 @@ am__v_lt_1 =
 libprinter_settings_la_LIBADD =
 am_libprinter_settings_la_OBJECTS = binary_tree.lo ps_ostream.lo \
 	ps_value.lo ps_math.lo ps_path.lo ps_parse_json.lo ps_eval.lo \
-	ps_context.lo ps_stack.lo ps_slice.lo printer_settings.lo
+	ps_context.lo ps_stack.lo ps_slice.lo ps_exec_posix.lo \
+	ps_exec_win.lo printer_settings.lo
 libprinter_settings_la_OBJECTS = $(am_libprinter_settings_la_OBJECTS)
 libprinter_settings_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -358,7 +359,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 lib_LTLIBRARIES = libprinter_settings.la
-libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c ps_stack.c ps_slice.c printer_settings.c
+libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c ps_stack.c ps_slice.c ps_exec_posix.c ps_exec_win.c printer_settings.c
 libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_'
 noinst_LTLIBRARIES = libbinary_tree.la
 libbinary_tree_la_SOURCES = binary_tree.c
@@ -458,6 +459,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/printer_settings.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_context.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_eval.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_exec_posix.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_exec_win.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_math.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_ostream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ps_parse_json.Plo@am__quote@
