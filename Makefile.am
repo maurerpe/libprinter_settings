@@ -30,4 +30,4 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src test
+SUBDIRS = include src test
