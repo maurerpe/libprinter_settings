@@ -13,7 +13,7 @@ There are no compile time dependancies, other than a functional C compiler.  The
 
 # System requirements
 
-Should run on any POSIX compliant operating system.  Does not presently have native windows support.  Should work fine under cygwin.
+Should run on any POSIX compliant operating system.  Preliminary windows support.  Windows support has not been tested.  Should work under cygwin.
 
 # Example code
 
