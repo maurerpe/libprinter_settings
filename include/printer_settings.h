@@ -31,6 +31,14 @@
 #ifndef PRINTER_SETTINGS_H
 #define PRINTER_SETTINGS_H
 
+#include <stdlib.h>
+#include <stdio.h>
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+
 #include "ps_value.h"
 #include "ps_slice.h"
 #include "ps_ostream.h"
@@ -48,5 +56,9 @@ const struct ps_value_t *PS_GetSettingProperties(const struct ps_value_t *ps, co
 struct ps_value_t *PS_BlankSettings(const struct ps_value_t *ps);
 int PS_AddSetting(struct ps_value_t *set, const char *ext, const char *name, const struct ps_value_t *value);
 int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src);
+
+#if defined (__cplusplus)
+}
+#endif
 
 #endif
