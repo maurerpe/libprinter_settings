@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include "printer_settings.h"
 #include "ps_ostream.h"
@@ -111,7 +110,7 @@ int main(void) {
   }
   
   //PS_SliceFile(os, ps, set, "test_widget.stl");
-  PS_SliceStr(os, ps, set, PS_OStreamContents(stl));
+  PS_SliceStr(os, ps, set, PS_OStreamContents(stl), PS_OStreamLength(stl));
   PS_FreeValue(set);
   
   return 0;

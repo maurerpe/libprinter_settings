@@ -28,12 +28,9 @@
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifdef WIN32
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include <windows.h>
 
@@ -42,6 +39,19 @@
 #define DWORD_MAX 4294967295
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+char *PS_WriteToTempFile(const char *model_str, size_t len) {
+  return NULL;
+}
+
+int PS_DeleteFile(const char *fileanme) {
+  if (!DeleteFile(filename)) {
+    fprintf(stderr, "Could not delete file\n");
+    return -1;
+  }
+
+  return 0;
+}
 
 static int WriteStr(HANDLE fd, const char *str) {
   size_t len;
@@ -227,5 +237,3 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
  err:
   return -1;
 }
-
-#endif

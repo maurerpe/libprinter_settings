@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include <string.h>
 
@@ -191,12 +190,13 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
   return -1;
 }
 
-static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file, const char *model_str) {
+static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file, const char *model_str, size_t model_str_len) {
   struct ps_value_t *dflt;
   struct ps_context_t *ctx;
   struct args_t args;
   struct ps_ostream_t *os;
-
+  char *tmpfile = NULL;
+  
   if ((os = PS_NewFileOStream(stdout)) != NULL) {
     printf("Using base settings:\n");
     PS_WriteValue(os, settings);
@@ -216,23 +216,38 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
   if (PS_EvalAll(ps, ctx) < 0)
     goto err3;
   
-  if (InitArgs(&args) < 0)
+  if (model_str && !model_file && (tmpfile = PS_WriteToTempFile(model_str, model_str_len)) == NULL)
     goto err3;
-
-  if (BuildArgs(&args, PS_GetPrinter(ps), PS_CtxGetValues(ctx), model_file) < 0)
+  
+  if (InitArgs(&args) < 0)
     goto err4;
+  
+  if (BuildArgs(&args, PS_GetPrinter(ps), PS_CtxGetValues(ctx), model_file ? model_file : tmpfile) < 0)
+    goto err5;
   
 #ifdef DEBUG
   PrintArgs(args);
 #endif
   
   if (PS_ExecArgs(args.a, model_str, gcode, PS_GetSearch(ps)) < 0)
-    goto err4;
-  
+    goto err5;
+
+  DestroyArgs(&args);
+  if (tmpfile) {
+    PS_DeleteFile(tmpfile);
+    free(tmpfile);
+  }
+  PS_FreeCtx(ctx);
+  PS_FreeValue(dflt);
   return 0;
 
- err4:
+ err5:
   DestroyArgs(&args);
+ err4:
+  if (tmpfile) {
+    PS_DeleteFile(tmpfile);
+    free(tmpfile);
+  }
  err3:
   PS_FreeCtx(ctx);
  err2:
@@ -242,9 +257,9 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
 }
 
 int PS_SliceFile(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file) {
-  return Slice(gcode, ps, settings, model_file, NULL);
+  return Slice(gcode, ps, settings, model_file, NULL, 0);
 }
 
-int PS_SliceStr(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_str) {
-  return Slice(gcode, ps, settings, NULL, model_str);
+int PS_SliceStr(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_str, size_t model_str_len) {
+  return Slice(gcode, ps, settings, NULL, model_str, model_str_len);
 }

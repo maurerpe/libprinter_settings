@@ -28,8 +28,6 @@
   POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef WIN32
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -41,6 +39,49 @@
 #include <string.h>
 
 #include "ps_exec.h"
+
+char *PS_WriteToTempFile(const char *model_str, size_t len) {
+  char *str;
+  int fd;
+  ssize_t count;
+  
+  if ((str = strdup("/tmp/printer_settings_XXXXXX.stl")) == NULL)
+    goto err;
+  
+  if ((fd = mkstemps(str, 4)) < 0)
+    goto err2;
+
+  while (len > 0) {
+    if ((count = write(fd, model_str, len)) < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+	continue;
+      perror("Cannot write to temp file");
+      goto err3;
+    }
+
+    model_str += count;
+    len -= count;
+  }
+  close(fd);
+  
+  return str;
+  
+ err3:
+  close(fd);
+ err2:
+  free(str);
+ err:
+  return NULL;
+}
+
+int PS_DeleteFile(const char *filename) {
+  if (unlink(filename) < 0) {
+    perror("Could not delete file");
+    return -1;
+  }
+  
+  return 0;
+}
 
 static int WriteStr(int fd, const char *str) {
   size_t len;
@@ -192,5 +233,3 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
  err:
   return -1;
 }
-
-#endif

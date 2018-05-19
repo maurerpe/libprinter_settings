@@ -50,4 +50,20 @@ fi
 
 AC_SEARCH_LIBS([tan], [m])
 
+AC_MSG_CHECKING([whether we are bulding for windows])
+AC_PREPROC_IFELSE(
+ [AC_LANG_PROGRAM([[
+#ifndef __WIN32
+#error win32
+#endif
+]])],win32=yes,win32=no)
+AC_MSG_RESULT($win32)
+
+AM_CONDITIONAL([WIN32], [test x"win32" == x"yes"])
+if test x"$win32" == x"yes"; then
+   AC_CHECK_FUNCS([CreateProcess],[],[AC_MSG_ERROR([missing critical function])])
+else
+   AC_CHECK_FUNCS([mkstemps fork execvp],[],[AC_MSG_ERROR([missing critical function])])
+fi
+
 AC_OUTPUT

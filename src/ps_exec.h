@@ -36,6 +36,9 @@
 
 #define PS_ENV_VAR "CURA_ENGINE_SEARCH_PATH"
 
+char *PS_WriteToTempFile(const char *model_str, size_t len);
+int PS_DeleteFile(const char *fileanme);
+
 int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *stdout_os, const struct ps_value_t *search);
 
 #endif

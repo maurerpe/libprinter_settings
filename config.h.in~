@@ -21,6 +21,9 @@
 /* Define to 1 if you have the `mkstemps' function. */
 #undef HAVE_MKSTEMPS
 
+/* Define to 1 if you have the `skljfas' function. */
+#undef HAVE_SKLJFAS
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
