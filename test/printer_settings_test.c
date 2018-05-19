@@ -45,7 +45,10 @@
 
 int main(void) {
   struct ps_value_t *ps, *search, *ext, *set;
-  struct ps_ostream_t *os;
+  struct ps_ostream_t *os, *stl;
+  FILE *file;
+  char buf[4096];
+  size_t len;
 
   if ((search = PS_NewList()) == NULL)
     exit(1);
@@ -91,7 +94,24 @@ int main(void) {
   if (PS_AddSetting(set, "0", "machine_nozzle_size", PS_NewFloat(0.4)) < 0)
     exit(1);
   
-  PS_SliceFile(os, ps, set, "test_widget.stl");
+  if ((stl = PS_NewStrOStream()) == NULL)
+    exit(1);
+
+  if ((file = fopen("test_widget.stl", "r")) == NULL)
+    exit(1);
+
+  while (!feof(file)) {
+    len = fread(buf, 1, sizeof(buf), file);
+    
+    if (ferror(file))
+      exit(1);
+    
+    if (PS_WriteBuf(stl, buf, len) < 0)
+      exit(1);
+  }
+  
+  //PS_SliceFile(os, ps, set, "test_widget.stl");
+  PS_SliceStr(os, ps, set, PS_OStreamContents(stl));
   PS_FreeValue(set);
   
   return 0;

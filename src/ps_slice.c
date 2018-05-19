@@ -113,6 +113,9 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
   if (AddArg(args, "slice") < 0)
     goto err;
 
+  if (AddArg(args, "-v") < 0)
+    goto err;
+  
   if (AddArg(args, "-j") < 0)
     goto err;
   
@@ -192,7 +195,15 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
   struct ps_value_t *dflt;
   struct ps_context_t *ctx;
   struct args_t args;
+  struct ps_ostream_t *os;
 
+  if ((os = PS_NewFileOStream(stdout)) != NULL) {
+    printf("Using base settings:\n");
+    PS_WriteValue(os, settings);
+    printf("\n");
+    PS_FreeOStream(os);
+  }
+  
   if ((dflt = PS_GetDefaults(ps)) == NULL)
     goto err;
 

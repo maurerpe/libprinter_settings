@@ -45,15 +45,16 @@
 static int WriteStr(int fd, const char *str) {
   size_t len;
   ssize_t count;
-
+  
   len = strlen(str);
   while (len > 0) {
     if ((count = write(fd, str, len)) < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
 	continue;
+      perror("Cannot write string to cura");
       return -1;
     }
-
+    
     str += count;
     len -= count;
   }
