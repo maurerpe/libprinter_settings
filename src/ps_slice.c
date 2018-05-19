@@ -229,7 +229,7 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
   PrintArgs(args);
 #endif
   
-  if (PS_ExecArgs(args.a, model_str, gcode, PS_GetSearch(ps)) < 0)
+  if (PS_ExecArgs(args.a, NULL, gcode, PS_GetSearch(ps)) < 0)
     goto err5;
 
   DestroyArgs(&args);
