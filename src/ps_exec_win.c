@@ -41,10 +41,63 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
 char *PS_WriteToTempFile(const char *model_str, size_t len) {
+  char dir[MAX_PATH + 1];
+  char *filename;
+  size_t flen;
+  HANDLE file;
+  DWORD count;
+  
+  if (!GetTempPath(sizeof(dir), dir)) {
+    fprintf(stderr, "Could not get location of temp folder\n");
+    goto err;
+  }
+  
+  if ((filename = malloc(MAX_PATH + 1)) == NULL)
+    goto err;
+  
+  while (1) {
+    if (!GetTempFileName(dir, "printer_settings_", 0, filename)) {
+      fprintf(stderr, "Unable to get temp filename\n");
+      goto err2;
+    }
+    
+    flen = strlen(filename);
+    filename[flen-3] = 's';
+    filename[flen-2] = 't';
+    filename[flen-1] = 'l';
+    
+    if ((file = CreateFileA(filename, GENERIC_READ, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE) {
+      if (GetLastError() == ERROR_FILE_EXISTS)
+	continue;
+      fprintf(stderr, "Could not open temp file");
+      goto err2;
+    }
+    
+    break;
+  }
+  
+  while (len > 0) {
+    if (!WriteFile(file, model_str, MIN(len, DWORD_MAX), &count, NULL)) {
+      fprintf(stderr, "Cannot write to temp file\n");
+      goto err3;
+    }
+  
+    model_str += count;
+    len -= count;
+  }
+  
+  return filename;
+
+ err3:
+  CloseHandle(filename);
+  PS_DeleteFile(filename);
+ err2:
+  free(filename);
+ err:
   return NULL;
 }
 
-int PS_DeleteFile(const char *fileanme) {
+int PS_DeleteFile(const char *filename) {
   if (!DeleteFile(filename)) {
     fprintf(stderr, "Could not delete file\n");
     return -1;
@@ -194,7 +247,7 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   if ((cmdline = strdup(PS_OStreamContents(os))) == NULL)
     goto err5;
   
-  if (!CreateProcess("CuraEngine", cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &startup_info, &proc_info)) {
+  if (!CreateProcessA("CuraEngine", cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &startup_info, &proc_info)) {
     fprintf(stderr, "Could not create child process\n");
     goto err5;
   }

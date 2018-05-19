@@ -169,6 +169,10 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+libbinary_tree_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(AM_CFLAGS) $(CFLAGS) $(libbinary_tree_la_LDFLAGS) $(LDFLAGS) \
+	-o $@
 libprinter_settings_la_LIBADD =
 am__libprinter_settings_la_SOURCES_DIST = binary_tree.c ps_ostream.c \
 	ps_value.c ps_math.c ps_path.c ps_parse_json.c ps_eval.c \
@@ -253,6 +257,7 @@ ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
+AS = @AS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -371,9 +376,10 @@ libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c \
 	ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c \
 	ps_stack.c ps_slice.c printer_settings.c $(am__append_1) \
 	$(am__append_2)
-libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_'
+libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_' -no-undefined
 noinst_LTLIBRARIES = libbinary_tree.la
 libbinary_tree_la_SOURCES = binary_tree.c
+libbinary_tree_la_LDFLAGS = -no-undefined
 all: all-am
 
 .SUFFIXES:
@@ -455,7 +461,7 @@ clean-noinstLTLIBRARIES:
 	}
 
 libbinary_tree.la: $(libbinary_tree_la_OBJECTS) $(libbinary_tree_la_DEPENDENCIES) $(EXTRA_libbinary_tree_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(LINK)  $(libbinary_tree_la_OBJECTS) $(libbinary_tree_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libbinary_tree_la_LINK)  $(libbinary_tree_la_OBJECTS) $(libbinary_tree_la_LIBADD) $(LIBS)
 
 libprinter_settings.la: $(libprinter_settings_la_OBJECTS) $(libprinter_settings_la_DEPENDENCIES) $(EXTRA_libprinter_settings_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libprinter_settings_la_LINK) -rpath $(libdir) $(libprinter_settings_la_OBJECTS) $(libprinter_settings_la_LIBADD) $(LIBS)

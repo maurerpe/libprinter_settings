@@ -2570,7 +2570,7 @@ m4trace:configure.ac:40: -1- _AM_SUBST_NOTMAKE([AM_DEFAULT_V])
 m4trace:configure.ac:40: -1- m4_pattern_allow([^AM_DEFAULT_VERBOSITY$])
 m4trace:configure.ac:40: -1- m4_pattern_allow([^AM_BACKSLASH$])
 m4trace:configure.ac:40: -1- _AM_SUBST_NOTMAKE([AM_BACKSLASH])
-m4trace:configure.ac:43: -1- LT_INIT
+m4trace:configure.ac:43: -1- LT_INIT([win32-dll])
 m4trace:configure.ac:43: -1- m4_pattern_forbid([^_?LT_[A-Z_]+$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^(_LT_EOF|LT_DLGLOBAL|LT_DLLAZY_OR_NOW|LT_MULTI_MODULE)$])
 m4trace:configure.ac:43: -1- LTOPTIONS_VERSION
@@ -2578,6 +2578,9 @@ m4trace:configure.ac:43: -1- LTSUGAR_VERSION
 m4trace:configure.ac:43: -1- LTVERSION_VERSION
 m4trace:configure.ac:43: -1- LTOBSOLETE_VERSION
 m4trace:configure.ac:43: -1- _LT_PROG_LTMAIN
+m4trace:configure.ac:43: -1- m4_pattern_allow([^AS$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^DLLTOOL$])
+m4trace:configure.ac:43: -1- m4_pattern_allow([^OBJDUMP$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^LIBTOOL$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^build$])
 m4trace:configure.ac:43: -1- m4_pattern_allow([^build_cpu$])
@@ -2706,12 +2709,11 @@ m4trace:configure.ac:45: -1- m4_pattern_allow([^am__fastdepCC_FALSE$])
 m4trace:configure.ac:45: -1- _AM_SUBST_NOTMAKE([am__fastdepCC_TRUE])
 m4trace:configure.ac:45: -1- _AM_SUBST_NOTMAKE([am__fastdepCC_FALSE])
 m4trace:configure.ac:46: -1- m4_pattern_allow([^CURA_ENGINE$])
-m4trace:configure.ac:62: -1- AM_CONDITIONAL([WIN32], [test x"win32" == x"yes"])
+m4trace:configure.ac:62: -1- AM_CONDITIONAL([WIN32], [test x"$win32" == x"yes"])
 m4trace:configure.ac:62: -1- m4_pattern_allow([^WIN32_TRUE$])
 m4trace:configure.ac:62: -1- m4_pattern_allow([^WIN32_FALSE$])
 m4trace:configure.ac:62: -1- _AM_SUBST_NOTMAKE([WIN32_TRUE])
 m4trace:configure.ac:62: -1- _AM_SUBST_NOTMAKE([WIN32_FALSE])
-m4trace:configure.ac:64: -1- m4_pattern_allow([^HAVE_CREATEPROCESS$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^LIB@&t@OBJS$])
 m4trace:configure.ac:69: -1- m4_pattern_allow([^LTLIBOBJS$])
 m4trace:configure.ac:69: -1- AM_CONDITIONAL([am__EXEEXT], [test -n "$EXEEXT"])

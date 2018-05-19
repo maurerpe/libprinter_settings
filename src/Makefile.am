@@ -38,7 +38,8 @@ else
 libprinter_settings_la_SOURCES += ps_exec_posix.c
 endif
 
-libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_'
+libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_' -no-undefined
 
 noinst_LTLIBRARIES = libbinary_tree.la
 libbinary_tree_la_SOURCES = binary_tree.c
+libbinary_tree_la_LDFLAGS = -no-undefined

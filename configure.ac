@@ -40,7 +40,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile test/Makefile])
 
-LT_INIT
+LT_INIT([win32-dll])
 
 AC_PROG_CC
 AC_CHECK_PROG(CURA_ENGINE, CuraEngine, yes)
@@ -59,9 +59,9 @@ AC_PREPROC_IFELSE(
 ]])],win32=yes,win32=no)
 AC_MSG_RESULT($win32)
 
-AM_CONDITIONAL([WIN32], [test x"win32" == x"yes"])
+AM_CONDITIONAL([WIN32], [test x"$win32" == x"yes"])
 if test x"$win32" == x"yes"; then
-   AC_CHECK_FUNCS([CreateProcess],[],[AC_MSG_ERROR([missing critical function])])
+   AC_CHECK_FUNCS([GetLastError CreateProcessA],[],[AC_MSG_ERROR([missing critical function])])
 else
    AC_CHECK_FUNCS([mkstemps fork execvp],[],[AC_MSG_ERROR([missing critical function])])
 fi
