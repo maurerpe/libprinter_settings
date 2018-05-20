@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #############################################################################
 
-AC_INIT([printer_settings], [0.1.2], [http://www.github.com/maurerpe/printer_settings])
+AC_INIT([printer_settings], [0.1.3], [http://www.github.com/maurerpe/printer_settings])
 
 AC_PREREQ([2.68])
 
