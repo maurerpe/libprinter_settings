@@ -97,6 +97,14 @@ static void PrintArgs(struct args_t *args) {
 #endif
 
 static void DestroyArgs(struct args_t *args) {
+  char **a = args->a;
+  size_t count = args->num_args;
+  
+  while (count--) {
+    free(*a);
+    a++;
+  }
+  
   free(args->a);
 }
 
