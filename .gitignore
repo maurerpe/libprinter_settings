@@ -1,3 +1,14 @@
+# Autotools
+autom4te.cache
+Makefile
+config.h
+config.log
+config.status
+libtool
+.deps
+.libs
+stamp-h1
+
 # Prerequisites
 *.d
 
