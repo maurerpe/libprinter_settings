@@ -8,6 +8,7 @@ libtool
 .deps
 .libs
 stamp-h1
+*~
 
 # Prerequisites
 *.d
