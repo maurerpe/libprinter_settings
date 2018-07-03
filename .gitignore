@@ -9,6 +9,7 @@ libtool
 .libs
 stamp-h1
 *~
+test/*_test
 
 # Prerequisites
 *.d

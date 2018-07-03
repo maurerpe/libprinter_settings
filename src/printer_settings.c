@@ -35,7 +35,6 @@
 #include <string.h>
 
 #include "printer_settings.h"
-#include "printer_settings_internal.h"
 #include "ps_path.h"
 #include "ps_parse_json.h"
 #include "ps_eval.h"
@@ -654,7 +653,7 @@ static void FreeQueue(struct queue_t *queue) {
   }
 }
 
-int PS_EvalAll(const struct ps_value_t *ps, struct ps_context_t *ctx) {
+static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   struct queue_t *queue, **tail;
   struct ps_value_t *members, *result, *set, *dflt, *trig;
   struct ps_value_iterator_t *vi_ext;
@@ -757,4 +756,33 @@ int PS_EvalAll(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   PS_FreeValue(members);
  err:
   return -1;
+}
+
+struct ps_value_t *PS_EvalAll(const struct ps_value_t *ps, const struct ps_value_t *settings) {
+  struct ps_value_t *dflt;
+  struct ps_context_t *ctx;
+  struct ps_value_t *eval;
+  
+  if ((dflt = PS_GetDefaults(ps)) == NULL)
+    goto err;
+  
+  if ((ctx = PS_NewCtx(settings, dflt)) == NULL)
+    goto err2;
+  
+  if (EvalCtx(ps, ctx) < 0)
+    goto err3;
+  
+  if ((eval = PS_CopyValue(PS_CtxGetValues(ctx))) == NULL)
+    goto err3;
+  
+  PS_FreeCtx(ctx);
+  PS_FreeValue(dflt);
+  return eval;
+
+ err3:
+  PS_FreeCtx(ctx);
+ err2:
+  PS_FreeValue(dflt);
+ err:
+  return NULL;
 }

@@ -35,7 +35,6 @@
 #include <string.h>
 
 #include "printer_settings.h"
-#include "printer_settings_internal.h"
 #include "ps_context.h"
 #include "ps_slice.h"
 #include "ps_exec.h"
@@ -199,8 +198,7 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
 }
 
 static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file, const char *model_str, size_t model_str_len) {
-  struct ps_value_t *dflt;
-  struct ps_context_t *ctx;
+  struct ps_value_t *set;
   struct args_t args;
   struct ps_ostream_t *os;
   char *tmpfile = NULL;
@@ -212,54 +210,41 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
     PS_FreeOStream(os);
   }
   
-  if ((dflt = PS_GetDefaults(ps)) == NULL)
+  if ((set = PS_EvalAll(ps, settings)) == NULL)
     goto err;
-
-  if ((ctx = PS_NewCtx(settings, dflt)) == NULL)
-    goto err2;
-  
-  PS_FreeValue(dflt);
-  dflt = NULL;
-  
-  if (PS_EvalAll(ps, ctx) < 0)
-    goto err3;
   
   if (model_str && !model_file && (tmpfile = PS_WriteToTempFile(model_str, model_str_len)) == NULL)
-    goto err3;
+    goto err2;
   
   if (InitArgs(&args) < 0)
+    goto err3;
+  
+  if (BuildArgs(&args, PS_GetPrinter(ps), set, model_file ? model_file : tmpfile) < 0)
     goto err4;
   
-  if (BuildArgs(&args, PS_GetPrinter(ps), PS_CtxGetValues(ctx), model_file ? model_file : tmpfile) < 0)
-    goto err5;
-  
 #ifdef DEBUG
-  PrintArgs(args);
+  PrintArgs(&args);
 #endif
   
   if (PS_ExecArgs(args.a, NULL, gcode, PS_GetSearch(ps)) < 0)
-    goto err5;
+    goto err4;
 
   DestroyArgs(&args);
   if (tmpfile) {
     PS_DeleteFile(tmpfile);
     free(tmpfile);
   }
-  PS_FreeCtx(ctx);
-  PS_FreeValue(dflt);
   return 0;
 
- err5:
-  DestroyArgs(&args);
  err4:
+  DestroyArgs(&args);
+ err3:
   if (tmpfile) {
     PS_DeleteFile(tmpfile);
     free(tmpfile);
   }
- err3:
-  PS_FreeCtx(ctx);
  err2:
-  PS_FreeValue(dflt);
+  PS_FreeValue(set);
  err:
   return -1;
 }
