@@ -439,7 +439,7 @@ static int PS_EqRaw(const struct ps_value_t *v) {
     return INFIX(==, PS_AsFloat);
     
   case t_string:
-    return CALL2(strcmp, PS_GetString) == 0;
+    return INFIX(==, PS_GetType) && CALL2(strcmp, PS_GetString) == 0;
     
   case t_variable:
     return INFIX(==, PS_GetType) && CALL2(strcmp, PS_GetString) == 0;
