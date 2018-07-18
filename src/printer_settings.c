@@ -653,6 +653,36 @@ static void FreeQueue(struct queue_t *queue) {
   }
 }
 
+static int CheckType(const struct ps_value_t *type, const struct ps_value_t *val) {
+  const char *str;
+  enum ps_type_t vtype;
+  
+  if (type == NULL || PS_GetType(type) != t_string)
+    return 0;
+  
+  if ((str = PS_GetString(type)) == NULL)
+    return 0;
+  
+  vtype = PS_GetType(val);
+  
+  if (strcmp(str, "str") == 0 ||
+      strcmp(str, "enum") == 0 ||
+      strcmp(str, "extruder") == 0 ||
+      strcmp(str, "optional_extruder") == 0)
+    return vtype == t_string ? 0 : -1;
+    
+  if (strcmp(str, "bool") == 0)
+    return vtype == t_boolean ? 0 : -1;
+  
+  if (strcmp(str, "float") == 0 || strcmp(str, "int") == 0)
+    return (vtype == t_float || vtype == t_integer) ? 0 : -1;
+  
+  if (str[0] == '[' || strcmp(str, "polygons") == 0)
+    return vtype == t_list ? 0 : -1;
+  
+  return 0;
+}
+
 static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   struct queue_t *queue, **tail;
   struct ps_value_t *members, *result, *set, *dflt, *trig;
@@ -714,6 +744,9 @@ static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
     dflt = PS_GetMember(set, "default_value", NULL);
     if (dflt && PS_AsBoolean(PS_Call2(PS_EQ, result, dflt))) {
       PS_FreeValue(result);
+      result = NULL;
+    } else if (CheckType(PS_GetMember(set, "type", NULL), result) < 0) {
+      fprintf(stderr, "Invalid type for %s->%s\n", ext, name);
       result = NULL;
     }
     

@@ -719,6 +719,7 @@ struct ps_value_t *PS_ResolveOrValue(const struct ps_value_t *v, struct ps_conte
 
 struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_context_t *ctx) {
   struct ps_value_t *ext, *ret;
+  const char *str;
   
   if (v == NULL || PS_GetType(v) != t_function || PS_ItemCount(v) != 3)
     goto err;
@@ -726,12 +727,14 @@ struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_contex
   if ((ext = PS_Eval(PS_GetItem(v, 1), ctx)) == NULL)
     goto err;
 
-  if (PS_GetType(ext) != t_string) {
-    fprintf(stderr, "Extruder name must be a string\n");
-    goto err2;
+  if (PS_GetType(ext) == t_string) {
+    str = PS_GetString(ext);
+  } else {
+    fprintf(stderr, "Extruder name must be a string, assuming \"0\"\n");
+    str = "0";
   }
   
-  if (PS_CtxPush(ctx, PS_GetString(ext)) < 0)
+  if (PS_CtxPush(ctx, str) < 0)
     goto err2;
   
   ret = PS_Eval(PS_GetItem(v, 2), ctx);
