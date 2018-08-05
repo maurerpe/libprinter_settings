@@ -129,17 +129,18 @@ struct func_prop_t {
 };
 
 const struct func_prop_t func_prop[] =
-  {{"int",          PS_Int,     1, 1},
-   {"math.ceil",    PS_Ceiling, 1, 1},
-   {"math.floor",   PS_Floor,   1, 1},
-   {"math.log",     PS_Log,     1, 1},
-   {"math.radians", PS_Radians, 1, 1},
-   {"math.sqrt",    PS_Sqrt,    1, 1},
-   {"math.tan",     PS_Tan, 	1, 1},
-   {"max",   	    PS_Max, 	1, 2},
-   {"min",   	    PS_Min, 	1, 2},
-   {"round", 	    PS_Round,   1, 2},
-   {"sum",   	    PS_Sum,     1, 1}};
+  {{"defaultExtruderPosition", PS_DEP,     0, 0},
+   {"int",                     PS_Int,     1, 1},
+   {"math.ceil",               PS_Ceiling, 1, 1},
+   {"math.floor",              PS_Floor,   1, 1},
+   {"math.log",                PS_Log,     1, 1},
+   {"math.radians",            PS_Radians, 1, 1},
+   {"math.sqrt",               PS_Sqrt,    1, 1},
+   {"math.tan",                PS_Tan,     1, 1},
+   {"max",                     PS_Max,     1, 2},
+   {"min",                     PS_Min,     1, 2},
+   {"round",                   PS_Round,   1, 2},
+   {"sum",                     PS_Sum,     1, 1}};
 
 static struct ps_value_t *FuncEval(const struct ps_value_t *v, struct ps_context_t *ctx) {
   const char *name;
@@ -711,12 +712,10 @@ static struct ps_value_t *ParseStr(const char *str, const char *ext, struct ps_v
     } else if (strcmp(PS_GetString(v), ")") == 0) {
       PS_FreeValue(v);
       v = NULL;
-      if (PushStackType(stack, prev_type, prev, ext, dep) < 0)
-	goto err3;
-      prev = NULL;
-      if (prev_type == e_operator) {
-	fprintf(stderr, "Error: Close parenthesis cannot follow %s\n", expr_name[prev_type]);
-	goto err3;
+      if (prev != NULL) {
+	if (PushStackType(stack, prev_type, prev, ext, dep) < 0)
+	  goto err3;
+	prev = NULL;
       }
       if ((prev = PS_CloseGrouping(stack, 0, &was_func)) == NULL)
 	goto err3;

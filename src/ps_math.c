@@ -696,6 +696,14 @@ struct ps_value_t *PS_Sum(const struct ps_value_t *v) {
   }
 }
 
+// defaultExtruderPosition
+struct ps_value_t *PS_DEP(const struct ps_value_t *v) {
+  if (VerifyArgs(v, 0, 0, NULL) < 0)
+    return NULL;
+
+  return PS_NewString("0");
+}
+
 struct ps_value_t *PS_ThenIfElse(const struct ps_value_t *v, struct ps_context_t *ctx) {
   struct ps_value_t *cond, *ret;
   

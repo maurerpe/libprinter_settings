@@ -157,6 +157,9 @@ void EvalTest(struct ps_value_t *expr, const char *ext, struct ps_value_t *test)
 int main(void) {
   struct ps_value_t *v;
   
+  v = ParseTest("defaultExtruderPosition()", "#global");
+  EvalTest(v, "#global", PS_NewFloat(0.313));
+  
   v = ParseTest("5 + test", "#global");
   EvalTest(v, "#global", PS_NewFloat(0.313));
   EvalTest(v, "#global", PS_NewInteger(3921));

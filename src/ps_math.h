@@ -65,6 +65,8 @@ struct ps_value_t *PS_Min(const struct ps_value_t *v);
 struct ps_value_t *PS_Round(const struct ps_value_t *v);
 struct ps_value_t *PS_Sum(const struct ps_value_t *v);
 
+struct ps_value_t *PS_DEP(const struct ps_value_t *v);
+
 struct ps_value_t *PS_ThenIfElse(const struct ps_value_t *v, struct ps_context_t *ctx);
 struct ps_value_t *PS_ResolveOrValue(const struct ps_value_t *v, struct ps_context_t *ctx);
 struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_context_t *ctx);
