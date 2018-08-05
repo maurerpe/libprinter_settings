@@ -34,6 +34,20 @@
 #include "ps_value.h"
 #include "ps_ostream.h"
 
+struct ps_slice_file_t {
+  char *model_file;
+  struct ps_value_t *model_settings;
+};
+
+struct ps_slice_str_t {
+  char *model_str;
+  size_t model_str_len;
+  struct ps_value_t *model_settings;
+};
+
+int PS_SliceFiles(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files);
+int PS_SliceStrs(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_str_t *strs, size_t num_str);
+
 int PS_SliceFile(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file);
 int PS_SliceStr(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_str, size_t model_str_len);
 

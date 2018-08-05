@@ -107,26 +107,11 @@ static void DestroyArgs(struct args_t *args) {
   free(args->a);
 }
 
-static int BuildArgs(struct args_t *args, const char *printer, const struct ps_value_t *settings, const char *model_file) {
+static int AddSettings(struct args_t *args, const struct ps_value_t *settings) {
   struct ps_ostream_t *os;
   struct ps_value_iterator_t *vi_ext, *vi_set;
   struct ps_value_t *val;
   const char *ext, *name;
-  
-  if (AddArg(args, "CuraEngine") < 0)
-    goto err;
-
-  if (AddArg(args, "slice") < 0)
-    goto err;
-
-  if (AddArg(args, "-v") < 0)
-    goto err;
-  
-  if (AddArg(args, "-j") < 0)
-    goto err;
-  
-  if (AddArg(args, printer) < 0)
-    goto err;
   
   if ((os = PS_NewStrOStream()) == NULL)
     goto err;
@@ -166,7 +151,7 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
 	  goto err4;
       } else {
 	if (PS_WriteValue(os, val) < 0)
-	  goto err;
+	  goto err4;
       }
       if (AddArg(args, PS_OStreamContents(os)) < 0)
 	goto err4;
@@ -176,14 +161,6 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
   }
   
   PS_FreeValueIterator(vi_ext);
-  
-  if (model_file) {
-    if (AddArg(args, "-l") < 0)
-      goto err2;
-    if (AddArg(args, model_file) < 0)
-      goto err2;
-  }
-  
   PS_FreeOStream(os);
   return 0;
   
@@ -197,11 +174,60 @@ static int BuildArgs(struct args_t *args, const char *printer, const struct ps_v
   return -1;
 }
 
-static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file, const char *model_str, size_t model_str_len) {
-  struct ps_value_t *set;
+static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files) {
+  struct ps_value_t *set, *model_set;
+  size_t count;
+  
+  if (AddArg(args, "CuraEngine") < 0)
+    goto err;
+
+  if (AddArg(args, "slice") < 0)
+    goto err;
+
+  if (AddArg(args, "-v") < 0)
+    goto err;
+  
+  if (AddArg(args, "-j") < 0)
+    goto err;
+  
+  if (AddArg(args, PS_GetPrinter(ps)) < 0)
+    goto err;
+  
+  if ((set = PS_EvalAll(ps, settings)) == NULL)
+    goto err;
+  
+  if (AddSettings(args, settings) < 0)
+    goto err2;
+
+  for (count = 0; count < num_files; count++) {
+    if (AddArg(args, "-l") < 0)
+      goto err2;
+    if (AddArg(args, files[count].model_file) < 0)
+      goto err2;
+
+    if (files[count].model_settings) {
+      if ((model_set = PS_EvalAllDflt(ps, files[count].model_settings, set)) == NULL)
+	goto err2;
+      if (AddSettings(args, model_set) < 0)
+	goto err3;
+      PS_FreeValue(model_set);
+    }
+  }
+  
+  PS_FreeValue(set);
+  return 0;
+
+ err3:
+  PS_FreeValue(model_set);
+ err2:
+  PS_FreeValue(set);
+ err:
+  return -1;
+}
+
+int PS_SliceFiles(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files) {
   struct args_t args;
   struct ps_ostream_t *os;
-  char *tmpfile = NULL;
   
   if ((os = PS_NewFileOStream(stdout)) != NULL) {
     printf("Using base settings:\n");
@@ -210,49 +236,77 @@ static int Slice(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const 
     PS_FreeOStream(os);
   }
   
-  if ((set = PS_EvalAll(ps, settings)) == NULL)
+  if (InitArgs(&args) < 0)
     goto err;
   
-  if (model_str && !model_file && (tmpfile = PS_WriteToTempFile(model_str, model_str_len)) == NULL)
+  if (BuildArgs(&args, ps, settings, files, num_files) < 0)
     goto err2;
-  
-  if (InitArgs(&args) < 0)
-    goto err3;
-  
-  if (BuildArgs(&args, PS_GetPrinter(ps), set, model_file ? model_file : tmpfile) < 0)
-    goto err4;
   
 #ifdef DEBUG
   PrintArgs(&args);
 #endif
   
   if (PS_ExecArgs(args.a, NULL, gcode, PS_GetSearch(ps)) < 0)
-    goto err4;
+    goto err2;
 
   DestroyArgs(&args);
-  if (tmpfile) {
-    PS_DeleteFile(tmpfile);
-    free(tmpfile);
-  }
   return 0;
 
- err4:
-  DestroyArgs(&args);
- err3:
-  if (tmpfile) {
-    PS_DeleteFile(tmpfile);
-    free(tmpfile);
-  }
  err2:
-  PS_FreeValue(set);
+  DestroyArgs(&args);
+ err:
+  return -1;
+}
+
+int PS_SliceStrs(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_str_t *strs, size_t num_str) {
+  struct ps_slice_file_t *files;
+  size_t count;
+  int ret;
+  
+  if ((files = calloc(num_str, sizeof(*files))) == NULL)
+    goto err;
+  
+  for (count = 0; count < num_str; count++) {
+    if ((files[count].model_file = PS_WriteToTempFile(strs[count].model_str, strs[count].model_str_len)) == NULL)
+      goto err2;
+    files[count].model_settings = strs[count].model_settings;
+  }
+
+  ret = PS_SliceFiles(gcode, ps, settings, files, num_str);
+  
+  for (count = 0; count < num_str; count++) {
+    PS_DeleteFile(files[count].model_file);
+    free(files[count].model_file);
+  }
+  
+  free(files);
+  return ret;
+  
+ err2:
+  while (count-- > 0) {
+    PS_DeleteFile(files[count].model_file);
+    free(files[count].model_file);
+  }
+  free(files);
  err:
   return -1;
 }
 
 int PS_SliceFile(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_file) {
-  return Slice(gcode, ps, settings, model_file, NULL, 0);
+  struct ps_slice_file_t file;
+
+  file.model_file = (char *) model_file;
+  file.model_settings = NULL;
+  
+  return PS_SliceFiles(gcode, ps, settings, &file, 1);
 }
 
 int PS_SliceStr(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const char *model_str, size_t model_str_len) {
-  return Slice(gcode, ps, settings, NULL, model_str, model_str_len);
+  struct ps_slice_str_t str;
+
+  str.model_str = (char *) model_str;
+  str.model_str_len = model_str_len;
+  str.model_settings = NULL;
+  
+  return PS_SliceStrs(gcode, ps, settings, &str, 1);
 }

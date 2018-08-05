@@ -57,6 +57,7 @@ int PS_AddSetting(struct ps_value_t *set, const char *ext, const char *name, con
 int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src);
 
 struct ps_value_t *PS_EvalAll(const struct ps_value_t *ps, const struct ps_value_t *settings);
+struct ps_value_t *PS_EvalAllDflt(const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_value_t *dflt);
 
 #if defined (__cplusplus)
 }

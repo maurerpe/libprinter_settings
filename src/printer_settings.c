@@ -791,31 +791,40 @@ static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   return -1;
 }
 
+struct ps_value_t *PS_EvalAllDflt(const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_value_t *dflt) {
+  struct ps_context_t *ctx;
+  struct ps_value_t *eval;
+
+  if (dflt == NULL)
+    return PS_EvalAll(ps, settings);
+  
+  if ((ctx = PS_NewCtx(settings, dflt)) == NULL)
+    goto err;
+  
+  if (EvalCtx(ps, ctx) < 0)
+    goto err2;
+  
+  eval = PS_CopyValue(PS_CtxGetValues(ctx));
+  PS_FreeCtx(ctx);
+  return eval;
+
+ err2:
+  PS_FreeCtx(ctx);
+ err:
+  return NULL;
+}
+
 struct ps_value_t *PS_EvalAll(const struct ps_value_t *ps, const struct ps_value_t *settings) {
   struct ps_value_t *dflt;
-  struct ps_context_t *ctx;
   struct ps_value_t *eval;
   
   if ((dflt = PS_GetDefaults(ps)) == NULL)
     goto err;
   
-  if ((ctx = PS_NewCtx(settings, dflt)) == NULL)
-    goto err2;
-  
-  if (EvalCtx(ps, ctx) < 0)
-    goto err3;
-  
-  if ((eval = PS_CopyValue(PS_CtxGetValues(ctx))) == NULL)
-    goto err3;
-  
-  PS_FreeCtx(ctx);
+  eval = PS_EvalAllDflt(ps, settings, dflt);
   PS_FreeValue(dflt);
   return eval;
 
- err3:
-  PS_FreeCtx(ctx);
- err2:
-  PS_FreeValue(dflt);
  err:
   return NULL;
 }
