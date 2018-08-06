@@ -178,6 +178,31 @@ static struct ps_value_t *LoadFileChain(const char *file, const struct ps_value_
   return NULL;
 }
 
+static void CopySettablePerExtruder(const char *key, struct ps_value_t **data, void *ref_data) {
+  struct ps_value_t *ext = (struct ps_value_t *) ref_data;
+  struct ps_value_t *spe, *cp;
+
+  if ((spe = PS_GetMember(*data, "settable_per_extruder", NULL)) == NULL)
+    return;
+
+  if (!PS_AsBoolean(spe))
+    return;
+  
+  if (PS_GetMember(ext, key, NULL))
+    return;
+  
+  if ((cp = PS_CopyValue(*data)) == NULL) {
+    fprintf(stderr, "Could not copy settable_per_extruder value\n");
+    return;
+  }
+  
+  if (PS_AddMember(PS_GetMember(ext, "#set", NULL), key, cp) < 0) {
+    PS_FreeValue(cp);
+    fprintf(stderr, "Could not insert settable_per_extruder value\n");
+    return;
+  }
+}
+
 struct ext_ref {
   struct ps_value_t *search;
   struct ps_value_t *def;
@@ -189,7 +214,11 @@ static void LoadExtruder(const char *key, struct ps_value_t **data, void *ref_da
   
   if ((v = LoadFileChain(PS_GetString(*data), ref->search)) == NULL)
     return;
-
+  
+  PS_ValueForeach(PS_GetMember(PS_GetMember(ref->def, "#global", NULL), "#set", NULL),
+		  CopySettablePerExtruder,
+		  v);
+  
   if (PS_AddMember(ref->def, key, v) < 0)
     PS_FreeValue(v);
 }
@@ -243,8 +272,12 @@ static int AddTriggers(struct ps_value_t *ps, const struct ps_value_t *dep, cons
       dep_name = PS_ValueIteratorKey(vi_set);
       
       if ((set = PS_GetMember(PS_GetMember(PS_GetMember(ps, dep_ext, NULL), "#set", NULL), dep_name, NULL)) == NULL) {
-	fprintf(stderr, "Warning: Unknown dependancy %s->%s\n", dep_ext, dep_name);
-	continue;
+	if ((set = PS_GetMember(PS_GetMember(PS_GetMember(ps, "#global", NULL), "#set", NULL), dep_name, NULL)) == NULL) {
+	  fprintf(stderr, "Warning: Unknown dependancy %s->%s\n", dep_ext, dep_name);
+	  continue;
+	}
+	
+	dep_ext = "#global";
       }
       
       if ((trig = PS_GetMember(set, "#trigger", NULL)) == NULL) {
@@ -791,25 +824,83 @@ static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   return -1;
 }
 
+struct bcast_spe_t {
+  struct ps_value_t *ps_set;
+  struct ps_value_t *settings;
+};
+
+static void BcastSpe(const char *key, struct ps_value_t **data, void *ref_data) {
+  struct bcast_spe_t *ref = (struct bcast_spe_t *) ref_data;
+  struct ps_value_t *spe, *cp;
+  struct ps_value_iterator_t *vi;
+  const char *vi_key;
+  
+  if ((spe = PS_GetMember(PS_GetMember(ref->ps_set, key, NULL), "settable_per_extruder", NULL)) == NULL)
+    return;
+
+  if (!PS_AsBoolean(spe))
+    return;
+  
+  if ((vi = PS_NewValueIterator(ref->settings)) == NULL)
+    return;
+
+  fprintf(stderr, "Note: Broadcasting %s to all extruders\n", key);
+  
+  while (PS_ValueIteratorNext(vi)) {
+    vi_key = PS_ValueIteratorKey(vi);
+
+    if (strcmp(vi_key, "#global") == 0)
+      continue;
+
+    if (PS_GetMember(PS_ValueIteratorData(vi), key, NULL))
+      continue;
+
+    if ((cp = PS_CopyValue(*data)) == NULL) {
+      fprintf(stderr, "Could not copy value for settable_per_extruder broadcast\n");
+      continue;
+    }
+
+    if (PS_AddMember(PS_ValueIteratorData(vi), key, cp) < 0) {
+      fprintf(stderr, "Could not insert value for settable_per_extruder broadcast\n");
+      PS_FreeValue(cp);
+    }
+  }
+  
+  PS_FreeValueIterator(vi);
+}
+
 struct ps_value_t *PS_EvalAllDflt(const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_value_t *dflt) {
   struct ps_context_t *ctx;
-  struct ps_value_t *eval;
+  struct ps_value_t *set, *eval;
+  struct bcast_spe_t bcast;
 
   if (dflt == NULL)
     return PS_EvalAll(ps, settings);
-  
-  if ((ctx = PS_NewCtx(settings, dflt)) == NULL)
+
+  if ((set = PS_CopyValue(settings)) == NULL)
     goto err;
   
-  if (EvalCtx(ps, ctx) < 0)
+  bcast.ps_set = PS_GetMember(PS_GetMember(ps, "#global", NULL), "#set", NULL);
+  bcast.settings = set;
+  PS_ValueForeach(PS_GetMember(set, "#global", NULL), BcastSpe, &bcast);
+  
+  if ((ctx = PS_NewCtx(set, dflt)) == NULL)
     goto err2;
+
+  PS_FreeValue(set);
+  set = NULL;
+  
+  if (EvalCtx(ps, ctx) < 0)
+    goto err3;
   
   eval = PS_CopyValue(PS_CtxGetValues(ctx));
   PS_FreeCtx(ctx);
   return eval;
 
- err2:
+ err3:
   PS_FreeCtx(ctx);
+ err2:
+  PS_FreeValue(set);
  err:
   return NULL;
 }
