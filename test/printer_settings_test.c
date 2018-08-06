@@ -87,6 +87,8 @@ int main(void) {
     exit(1);
   if (PS_AddSetting(set, NULL, "infill_sparse_density", PS_NewFloat(20)) < 0)
     exit(1);
+  if (PS_AddSetting(set, NULL, "extruders_enabled_count", PS_NewInteger(1)) < 0)
+    exit(1);
   
   if (PS_AddSetting(set, "0", "material_diameter", PS_NewFloat(1.75)) < 0)
     exit(1);  
