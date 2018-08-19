@@ -224,7 +224,7 @@ static int AddSettings(struct args_t *args, const struct ps_value_t *settings) {
 }
 
 static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files) {
-  struct ps_value_t *set, *model_set;
+  struct ps_value_t *set, *dflt, *model_set;
   size_t count;
   
   if (AddArg(args, "CuraEngine") < 0)
@@ -242,38 +242,52 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
   if (AddArg(args, PS_GetPrinter(ps)) < 0)
     goto err;
   
-  if ((set = PS_EvalAll(ps, settings)) == NULL)
+  if ((dflt = PS_GetDefaults(ps)) == NULL)
     goto err;
   
-  if (AddSettings(args, settings) < 0)
+  if ((set = PS_EvalAllDflt(ps, settings, dflt)) == NULL)
     goto err2;
 
+  printf("Pruning global settings\n");
+  if (PruneSettings(set, dflt) < 0)
+    goto err3;
+  
+  if (AddSettings(args, set) < 0)
+    goto err3;
+  
+  if (PS_MergeSettings(dflt, set) < 0)
+    goto err3;
+  
   for (count = 0; count < num_files; count++) {
     if (AddArg(args, "-l") < 0)
-      goto err2;
+      goto err3;
     if (AddArg(args, files[count].model_file) < 0)
-      goto err2;
+      goto err3;
 
     if (files[count].model_settings) {
-      if ((model_set = PS_EvalAllDflt(ps, files[count].model_settings, set)) == NULL)
-	goto err2;
-      
-      if ((PruneSettings(model_set, set)) < 0)
+      if ((model_set = PS_EvalAllDflt(ps, files[count].model_settings, dflt)) == NULL)
 	goto err3;
+
+      printf("Pruning settings for model %zd\n", count);
+      if ((PruneSettings(model_set, dflt)) < 0)
+	goto err4;
       
       if (AddSettings(args, model_set) < 0)
-	goto err3;
+	goto err4;
       PS_FreeValue(model_set);
     }
   }
   
   PS_FreeValue(set);
+  PS_FreeValue(dflt);
   return 0;
 
- err3:
+ err4:
   PS_FreeValue(model_set);
- err2:
+ err3:
   PS_FreeValue(set);
+ err2:
+  PS_FreeValue(dflt);
  err:
   return -1;
 }
