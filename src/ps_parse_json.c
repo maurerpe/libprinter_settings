@@ -146,7 +146,10 @@ static struct ps_value_t *ParseBare(struct buffer *buf) {
     f = strtod(str, (char **) &stop);
     if (stop != strend) {
       PRINT_ERR;
-      fprintf(stderr, "Unexpected garbage after number");
+      if (stop == str)
+	fprintf(stderr, "Illegal bareword\n");
+      else
+	fprintf(stderr, "Unexpected garbage after float\n");
       return NULL;
     }
     if ((v = PS_NewFloat(f)) == NULL)
@@ -157,7 +160,10 @@ static struct ps_value_t *ParseBare(struct buffer *buf) {
   i = strtoll(str, (char **) &stop, 0);
   if (stop != strend) {
     PRINT_ERR;
-    fprintf(stderr, "Unexpected garbage after number");
+    if (stop == str)
+      fprintf(stderr, "Illegal bareword\n");
+    else
+      fprintf(stderr, "Unexpected garbage after integer\n");
     return NULL;
   }
   if ((v = PS_NewInteger(i)) == NULL)

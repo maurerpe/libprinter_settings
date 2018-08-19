@@ -718,7 +718,7 @@ static int CheckType(const struct ps_value_t *type, const struct ps_value_t *val
 
 static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
   struct queue_t *queue, **tail;
-  struct ps_value_t *members, *result, *set, *dflt, *trig;
+  struct ps_value_t *members, *result, *set, *trig;
   struct ps_value_iterator_t *vi_ext;
   struct ps_value_iterator_t *vi_set;
   const char *ext, *name;
@@ -774,11 +774,7 @@ static int EvalCtx(const struct ps_value_t *ps, struct ps_context_t *ctx) {
     }
     PS_CtxPop(ctx);
     
-    dflt = PS_GetMember(set, "default_value", NULL);
-    if (dflt && PS_AsBoolean(PS_Call2(PS_EQ, result, dflt))) {
-      PS_FreeValue(result);
-      result = NULL;
-    } else if (CheckType(PS_GetMember(set, "type", NULL), result) < 0) {
+    if (CheckType(PS_GetMember(set, "type", NULL), result) < 0) {
       fprintf(stderr, "Invalid type for %s->%s\n", ext, name);
       result = NULL;
     }
