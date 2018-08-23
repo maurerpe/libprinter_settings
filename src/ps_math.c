@@ -696,6 +696,22 @@ struct ps_value_t *PS_Sum(const struct ps_value_t *v) {
   }
 }
 
+struct ps_value_t *PS_Len(const struct ps_value_t *v) {
+  enum ps_type_t type;
+  
+  if (VerifyArgs(v, 1, 1, &type) < 0)
+    return NULL;
+  
+  switch (type) {
+  case t_list:
+    return PS_NewInteger(PS_ItemCount(PS_GetItem(v, 0)));
+    
+  default:
+      fprintf(stderr, "Wrong type args to function PS_Len\n");
+      return NULL;
+  }
+}
+
 // defaultExtruderPosition
 struct ps_value_t *PS_DEP(const struct ps_value_t *v) {
   if (VerifyArgs(v, 0, 0, NULL) < 0)

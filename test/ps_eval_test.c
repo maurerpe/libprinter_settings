@@ -193,6 +193,10 @@ int main(void) {
   EvalTest(v, "1", PS_NewFloat(1.7));
   PS_FreeValue(v);
   
+  v = ParseTest("len(extruderValues('test'))", "#global");
+  EvalTest2(v, "0", PS_NewFloat(3.1), "1", PS_NewFloat(1.7));
+  PS_FreeValue(v);
+  
   v = ParseTest("extruderValues('test')", "#global");
   EvalTest2(v, "0", PS_NewFloat(1.7), "1", PS_NewString("hi"));
   PS_FreeValue(v);

@@ -140,7 +140,8 @@ const struct func_prop_t func_prop[] =
    {"max",                     PS_Max,     1, 2},
    {"min",                     PS_Min,     1, 2},
    {"round",                   PS_Round,   1, 2},
-   {"sum",                     PS_Sum,     1, 1}};
+   {"sum",                     PS_Sum,     1, 1},
+   {"len",                     PS_Len,     1, 1}};
 
 static struct ps_value_t *FuncEval(const struct ps_value_t *v, struct ps_context_t *ctx) {
   const char *name;
