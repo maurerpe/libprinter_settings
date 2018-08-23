@@ -55,7 +55,8 @@ const struct ps_value_t *PS_GetSettingProperties(const struct ps_value_t *ps, co
 struct ps_value_t *PS_BlankSettings(const struct ps_value_t *ps);
 int PS_AddSetting(struct ps_value_t *set, const char *ext, const char *name, const struct ps_value_t *value);
 int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src);
-
+int PS_PruneSettings(struct ps_value_t *settings, const struct ps_value_t *dflt);
+  
 struct ps_value_t *PS_EvalAll(const struct ps_value_t *ps, const struct ps_value_t *settings);
 struct ps_value_t *PS_EvalAllDflt(const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_value_t *dflt);
 

@@ -108,54 +108,6 @@ static void DestroyArgs(struct args_t *args) {
   free(args->a);
 }
 
-static int PruneSettings(struct ps_value_t *settings, const struct ps_value_t *dflt) {
-  struct ps_value_iterator_t *vi_ext, *vi_set;
-  const char *ext, *set;
-  struct ps_value_t *ve, *vs;
-  size_t count = 0;
-  
-  if ((vi_ext = PS_NewValueIterator(dflt)) == NULL)
-    goto err;
-  
-  while (PS_ValueIteratorNext(vi_ext)) {
-    ext = PS_ValueIteratorKey(vi_ext);
-
-    if ((ve = PS_GetMember(settings, ext, NULL)) == NULL)
-      continue;
-    
-    if ((vi_set = PS_NewValueIterator(PS_ValueIteratorData(vi_ext))) == NULL)
-      goto err2;
-
-    while (PS_ValueIteratorNext(vi_set)) {
-      set = PS_ValueIteratorKey(vi_set);
-      
-      if ((vs = PS_GetMember(ve, set, NULL)) == NULL)
-	continue;
-      
-      if (PS_AsBoolean(PS_Call2(PS_EQ, vs, PS_ValueIteratorData(vi_set))))
-	PS_RemoveMember(ve, set);
-      else
-	count++;
-    }
-    
-    PS_FreeValueIterator(vi_set);
-    
-    if (PS_ItemCount(ve) == 0)
-      PS_RemoveMember(settings, ext);
-  }
-  
-  PS_FreeValueIterator(vi_ext);
-  
-  printf("After pruning, %zu settings remain\n", count);
-  
-  return 0;
-  
- err2:
-  PS_FreeValueIterator(vi_ext);
- err:
-  return -1;
-}
-
 static int AddSettings(struct args_t *args, const struct ps_value_t *settings) {
   struct ps_ostream_t *os;
   struct ps_value_iterator_t *vi_ext, *vi_set;
@@ -249,7 +201,7 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
     goto err2;
 
   printf("Pruning global settings\n");
-  if (PruneSettings(set, dflt) < 0)
+  if (PS_PruneSettings(set, dflt) < 0)
     goto err3;
   
   if (AddSettings(args, set) < 0)
@@ -269,7 +221,7 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
 	goto err3;
 
       printf("Pruning settings for model %zd\n", count);
-      if ((PruneSettings(model_set, dflt)) < 0)
+      if ((PS_PruneSettings(model_set, dflt)) < 0)
 	goto err4;
       
       if (AddSettings(args, model_set) < 0)
