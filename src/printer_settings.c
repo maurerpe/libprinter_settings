@@ -657,8 +657,6 @@ int PS_PruneSettings(struct ps_value_t *settings, const struct ps_value_t *dflt)
   
   PS_FreeValueIterator(vi_ext);
   
-  printf("After pruning, %zu settings remain\n", count);
-  
   return 0;
   
  err2:
