@@ -663,7 +663,23 @@ int PS_RemoveMember(struct ps_value_t *obj, const char *name) {
   return BinaryTreeRemove(obj->v.v_object, name);
 }
 
-ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
+static ssize_t WriteNewline(struct ps_ostream_t *os, ssize_t indent) {
+  size_t count;
+  
+  if (indent < 0)
+    return 0;
+  
+  if (PS_WriteChar(os, '\n') < 0)
+    return -1;
+  
+  for (count = 0; count < indent; count++)
+    if (PS_WriteChar(os, ' ') < 0)
+      return -1;
+  
+  return indent + 1;
+}
+
+static ssize_t WriteValueIndent(struct ps_ostream_t *os, const struct ps_value_t *v, ssize_t indent) {
   size_t count, bytes;
   ssize_t len;
   struct binary_tree_iterator_t *bti;
@@ -690,18 +706,22 @@ ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
 
   case t_list:
   case t_function:
+    bytes = 0;
     if (PS_WriteChar(os, v->type == t_list ? '[' : '(') < 0)
       return -1;
-    bytes = 1;
+    bytes++;
     
     for (count = 0; count < v->v.v_list->num_elem; count++) {
       if (count > 0) {
 	if (PS_WriteChar(os, ',') < 0)
 	  return -1;
 	bytes++;
+	if ((len = WriteNewline(os, indent)) < 0)
+	  return -1;
+	bytes += len;
       }
       
-      if ((len = PS_WriteValue(os, v->v.v_list->v[count])) < 0)
+      if ((len = WriteValueIndent(os, v->v.v_list->v[count], indent < 0 ? indent : indent + 1)) < 0)
 	return -1;
       bytes += len;
     }
@@ -712,17 +732,21 @@ ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
     return bytes;
     
   case t_object:
+    bytes = 0;
     if ((bti = NewBinaryTreeIterator(v->v.v_object)) == NULL)
       return -1;
     if (PS_WriteChar(os, '{') < 0)
       goto objerr;
-    bytes = 1;
+    bytes++;
     count = 0;
     while (BinaryTreeIteratorNext(bti)) {
-      if (count++ > 0) {
+      if (count > 0) {
 	if (PS_WriteChar(os, ',') < 0)
 	  goto objerr;
 	bytes++;
+	if ((len = WriteNewline(os, indent)) < 0)
+	  return -1;
+	bytes += len;
       }
       
       if ((len = PS_WriteJsonStr(os, BinaryTreeIteratorKey(bti), 1)) < 0)
@@ -732,10 +756,18 @@ ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
       if (PS_WriteChar(os, ':') < 0)
 	goto objerr;
       bytes++;
+
+      if (indent > 0) {
+	if (PS_WriteChar(os, ' ') < 0)
+	  goto objerr;
+	bytes++;
+      }
       
-      if ((len = PS_WriteValue(os, (struct ps_value_t *)BinaryTreeIteratorData(bti))) < 0)
+      if ((len = WriteValueIndent(os, (struct ps_value_t *)BinaryTreeIteratorData(bti), indent < 0 ? indent : indent + len + 3)) < 0)
 	goto objerr;
       bytes += len;
+      
+      count++;
     }
     FreeBinaryTreeIterator(bti);
     if (PS_WriteChar(os, '}') < 0)
@@ -749,6 +781,14 @@ ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
  objerr:
   FreeBinaryTreeIterator(bti);
   return -1;
+}
+
+ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v) {
+  return WriteValueIndent(os, v, -1);
+}
+
+ssize_t PS_WriteValuePretty(struct ps_ostream_t *os, const struct ps_value_t *v) {
+  return WriteValueIndent(os, v, 1);
 }
 
 struct ref_func {

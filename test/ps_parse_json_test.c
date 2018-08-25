@@ -48,6 +48,10 @@ void TestStr(const char *str, struct ps_ostream_t *os) {
   
   printf("'%s' -> '%s'\n", str, PS_OStreamContents(os));
 
+  PS_OStreamReset(os);
+  PS_WriteValuePretty(os, v);  
+  printf("%s\n", PS_OStreamContents(os));
+  
   PS_FreeValue(v);
 }
 
@@ -62,4 +66,5 @@ int main(void) {
   TestStr("-391e-3", os);
   TestStr("[\"list\",2,true]", os);
   TestStr("{\"name\": \"Bob\",\"number\":4,\"list\":[5,6,true,null,{},[]]}", os);
+  TestStr("{\"#global\": {\"Bob\": 4,\"poly\":[[3,2],[2,1],[39,91]],\"list\":[5,6,true,null,{\"test\": 4, \"hi\":[]},[]]},\"0\": {\"material_diameter\":3.13}}", os);
 }

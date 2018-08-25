@@ -85,6 +85,7 @@ int PS_AddMember(struct ps_value_t *obj, const char *name, struct ps_value_t *v)
 int PS_RemoveMember(struct ps_value_t *obj, const char *name);
 
 ssize_t PS_WriteValue(struct ps_ostream_t *os, const struct ps_value_t *v);
+ssize_t PS_WriteValuePretty(struct ps_ostream_t *os, const struct ps_value_t *v);
 
 void PS_ValueForeach(const struct ps_value_t *v, void (*func)(const char *, struct ps_value_t **, void *), void *ref_data);
 
