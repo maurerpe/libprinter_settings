@@ -579,7 +579,7 @@ int PS_AddSetting(struct ps_value_t *set, const char *ext, const char *name, con
 }
 
 int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src) {
-  struct ps_value_t *set, *v;
+  struct ps_value_t *set, *v, *mem;
   struct ps_value_iterator_t *vi_ext, *vi_set;
   const char *ext, *name;
   
@@ -599,7 +599,15 @@ int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src) {
       if ((v = PS_CopyValue(set)) == NULL)
 	goto err3;
       
-      if (PS_AddMember(PS_GetMember(dest, ext, NULL), name, v) < 0)
+      if ((mem = PS_GetMember(dest, ext, NULL)) == NULL) {
+	if ((mem = PS_NewObject()) == NULL)
+	  goto err4;
+
+	if (PS_AddMember(dest, ext, mem) < 0)
+	  goto err5;
+      }
+      
+      if (PS_AddMember(mem, name, v) < 0)
 	goto err4;
     }
 
@@ -608,7 +616,9 @@ int PS_MergeSettings(struct ps_value_t *dest, struct ps_value_t *src) {
   
   PS_FreeValueIterator(vi_ext);
   return 0;
-  
+
+ err5:
+  PS_FreeValue(mem);
  err4:
   PS_FreeValue(v);
  err3:
