@@ -106,6 +106,7 @@ const struct oper_prop_t oper_prop[] =
   {{"**",   PS_Expt, EXP,  2},
    {"*",    PS_Mul,  MUL,  2},
    {"/",    PS_Div,  MUL,  2},
+   {"%",    PS_Mod,  MUL,  2},
    {"+",    PS_Add,  ADD,  2},
    {"-",    PS_Sub,  ADD,  2},
    {"<",    PS_LT,   CMP,  2},
@@ -480,6 +481,7 @@ static enum expr_type_t NextAtom(const char **str, const char **end) {
   case '(':
   case ')':
   case '/':
+  case '%':
   case '+':
   case '-':
   case ',':

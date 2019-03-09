@@ -41,6 +41,7 @@ struct ps_value_t *PS_Call2(const ps_func_t func, const struct ps_value_t *v1, c
 struct ps_value_t *PS_Expt(const struct ps_value_t *v);
 struct ps_value_t *PS_Mul(const struct ps_value_t *v);
 struct ps_value_t *PS_Div(const struct ps_value_t *v);
+struct ps_value_t *PS_Mod(const struct ps_value_t *v);
 struct ps_value_t *PS_Add(const struct ps_value_t *v);
 struct ps_value_t *PS_Sub(const struct ps_value_t *v);
 struct ps_value_t *PS_LT(const struct ps_value_t *v);

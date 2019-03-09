@@ -217,6 +217,10 @@ NUM_FUNC(PS_Div,
 	 CALL2(IntDiv, PS_AsInteger),
 	 PS_NewFloat(INFIX(/, PS_AsFloat)))
 
+NUM_FUNC(PS_Mod,
+	 PS_NewInteger(INFIX(%, PS_AsInteger)),
+	 PS_NewFloat(CALL2(fmod, PS_AsFloat)))
+
 static struct ps_value_t *Concat(const struct ps_value_t *v) {
   struct ps_value_t *concat;
   struct ps_ostream_t *os;
