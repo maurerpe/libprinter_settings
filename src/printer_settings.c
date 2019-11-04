@@ -273,7 +273,8 @@ static int AddTriggers(struct ps_value_t *ps, const struct ps_value_t *dep, cons
       
       if ((set = PS_GetMember(PS_GetMember(PS_GetMember(ps, dep_ext, NULL), "#set", NULL), dep_name, NULL)) == NULL) {
 	if ((set = PS_GetMember(PS_GetMember(PS_GetMember(ps, "#global", NULL), "#set", NULL), dep_name, NULL)) == NULL) {
-	  fprintf(stderr, "Warning: Unknown dependancy %s->%s\n", dep_ext, dep_name);
+	  if (!PS_CtxIsConstant(dep_name))
+	    fprintf(stderr, "Warning: Unknown dependancy %s->%s\n", dep_ext, dep_name);
 	  continue;
 	}
 	

@@ -35,6 +35,7 @@
 
 struct ps_context_t;
 
+int PS_CtxIsConstant(const char *name);
 struct ps_context_t *PS_NewCtx(const struct ps_value_t *hard_settings, const struct ps_value_t *dflt);
 void PS_FreeCtx(struct ps_context_t *ctx);
 

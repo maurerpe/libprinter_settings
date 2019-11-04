@@ -52,6 +52,10 @@ struct ps_context_t {
   struct list_t *ext_stack;
 };
 
+int PS_CtxIsConstant(const char *name) {
+  return strcmp(name, "math.pi") == 0;
+}
+
 static struct ps_value_t *BuildConst(void) {
   struct ps_value_t *cv, *v;
 
