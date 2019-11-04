@@ -17,7 +17,7 @@ Should run on any POSIX compliant operating system.  Preliminary windows support
 
 # Example code
 
-See test/printer_settings_test.c for a very rough example of how to use the library.   The general idea os
+See test/printer_settings_test.c for a very rough example of how to use the library.   The general idea is
 1) Call PS_New() to generate a printer settings.  The two arguments are the name of .def.json file for the specific printer used and a search path. Be sure to include the Cura definitions and extruder directories, usually /usr/share/cura/resources/definitions and /usr/share/cura/resources/extruders.
 2) Build your settings with PS_BlankSettings(), PS_AddSetting() and PS_MergeSettings().  Generally only about a dozen settings for your quality level and material are required.
 3) Call either PS_SliceFile() or PS_SliceStr() to slice your model, depending if the model is an .stl file saved to disk or a string containin the stl data.  The result is returned as a struct ps_ostream_t.  Usually this will be created PS_NewStrOStream() and then the gcode can be extracted with PS_OStreamContents().
