@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <math.h>
 #include <string.h>
 
 #include "ps_context.h"
@@ -46,9 +47,31 @@ struct ps_context_t {
   struct ps_value_t *hard;
   struct ps_value_t *over;
   struct ps_value_t *dflt;
+  struct ps_value_t *const_val;
   
   struct list_t *ext_stack;
 };
+
+static struct ps_value_t *BuildConst(void) {
+  struct ps_value_t *cv, *v;
+
+  if ((cv = PS_NewObject()) == NULL)
+    goto err;
+
+  if ((v = PS_NewFloat(M_PI)) == NULL)
+    goto err2;
+  if (PS_AddMember(cv, "math.pi", v) < 0)
+    goto err3;
+  
+  return cv;
+  
+ err3:
+  PS_FreeValue(v);
+ err2:
+  PS_FreeValue(cv);
+ err:
+  return NULL;
+}
 
 static struct list_t *NewList(const char *ext) {
   struct list_t *list;
@@ -176,14 +199,21 @@ struct ps_context_t *PS_NewCtx(const struct ps_value_t *hard_settings, const str
   if ((ctx->over = PS_CopyValue(hard_settings ? hard_settings : ctx->hard)) == NULL)
     goto err4;
   
+  if ((ctx->const_val = BuildConst()) == NULL)
+    goto err5;
+  
   if ((ext = GetFirstExt(ctx->dflt)) == NULL)
-    goto err4;
+    goto err6;
   
   if ((ctx->ext_stack = NewList(ext)) == NULL)
-    goto err4;
+    goto err6;
   
   return ctx;
-  
+
+ err6:
+  PS_FreeValue(ctx->const_val);
+ err5:
+  PS_FreeValue(ctx->over);
  err4:
   PS_FreeValue(ctx->hard);
  err3:
@@ -191,6 +221,7 @@ struct ps_context_t *PS_NewCtx(const struct ps_value_t *hard_settings, const str
  err2:
   free(ctx);
  err:
+  fprintf(stderr, "Error: Could not create constant value object\n");
   return NULL;
 }
 
@@ -207,6 +238,7 @@ void PS_FreeCtx(struct ps_context_t *ctx) {
     cur = next;
   }
   
+  PS_FreeValue(ctx->const_val);
   PS_FreeValue(ctx->over);
   PS_FreeValue(ctx->hard);
   PS_FreeValue(ctx->dflt);
@@ -248,7 +280,10 @@ static const struct ps_value_t *RawLookup(struct ps_context_t *ctx, const char *
   
   if (strcmp(ext, "#global") != 0 && (v = RawLookup(ctx, "#global", name, 1)))
     return v;
-
+  
+  if ((v = PS_GetMember(ctx->const_val, name, NULL)))
+    return v;
+  
   if (!quiet)
     fprintf(stderr, "Unknown setting %s->%s\n", ext, name);
   return NULL;

@@ -176,6 +176,10 @@ int main(void) {
   EvalTest(v, "#global", PS_NewFloat(1.2));
   PS_FreeValue(v);
   
+  v = ParseTest("test + math.pi", "#global");
+  EvalTest(v, "#global", PS_NewInteger(3));
+  PS_FreeValue(v);
+  
   v = ParseTest("round(3/test,4)+2", "1");
   EvalTest(v, "1", PS_NewFloat(1.7));
   PS_FreeValue(v);
