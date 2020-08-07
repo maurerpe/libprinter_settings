@@ -40,6 +40,7 @@ enum ps_type_t {
   t_float,
   t_string,
   t_variable,
+  t_builtin_func,
   t_list,
   t_function,
   t_object
@@ -55,8 +56,10 @@ struct ps_value_t *PS_NewString(const char *v);
 struct ps_value_t *PS_NewStringLen(const char *v, size_t len);
 struct ps_value_t *PS_NewVariable(const char *v);
 struct ps_value_t *PS_NewVariableLen(const char *v, size_t len);
+struct ps_value_t *PS_NewBuiltinFunc(const char *nane);
+struct ps_value_t *PS_NewBuiltinFuncLen(const char *name, size_t len);
 struct ps_value_t *PS_NewList(void);
-struct ps_value_t *PS_NewFunction(const char *name);
+struct ps_value_t *PS_NewFunction(const struct ps_value_t *func);
 struct ps_value_t *PS_NewObject(void);
 void PS_FreeValue(struct ps_value_t *v);
 
@@ -77,6 +80,7 @@ void PS_StringToVariable(struct ps_value_t *v);
 void PS_VariableToString(struct ps_value_t *v);
 int PS_AppendToString(struct ps_value_t *str, const char *append); /* Slow */
 int PS_AppendToList(struct ps_value_t *list, struct ps_value_t *v);
+int PS_AppendCopyToList(struct ps_value_t *list, const struct ps_value_t *v);
 struct ps_value_t *PS_PopFromList(struct ps_value_t *list);
 int PS_PrependToList(struct ps_value_t *list, struct ps_value_t *v); /* Slow */
 int PS_SetItem(struct ps_value_t *list, size_t pos, struct ps_value_t *v);

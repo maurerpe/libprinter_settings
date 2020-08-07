@@ -34,6 +34,9 @@
 #include "ps_value.h"
 #include "ps_context.h"
 
+int PS_AddBuiltin(struct ps_value_t *v, const char *key);
+
+struct ps_value_t *PS_CallByName(const char *name, struct ps_value_t *args);
 struct ps_value_t *PS_Eval(const struct ps_value_t *v, struct ps_context_t *ctx);
 struct ps_value_t *PS_ParseForEval(const struct ps_value_t *val, const char *ext, struct ps_value_t *dep);
 

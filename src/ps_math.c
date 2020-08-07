@@ -196,7 +196,7 @@ NUM_FUNC(PS_Expt,
 	 PS_NewFloat(CALL2(pow, PS_AsFloat)))
 
 static struct ps_value_t *IntMul(int64_t a, int64_t b) {
-  if (abs(a) > INT64_MAX / abs(b))
+  if (llabs(a) > INT64_MAX / llabs(b))
     return PS_NewFloat(((double) a) * ((double) b));
 
   return PS_NewInteger(a * b);
@@ -208,9 +208,9 @@ NUM_FUNC(PS_Mul,
 
 static struct ps_value_t *IntDiv(int64_t a, int64_t b) {
   if (a % b != 0)
-    return PS_NewFloat(((double) a) * ((double) b));
+    return PS_NewFloat(((double) a) / ((double) b));
 
-  return PS_NewInteger(a % b);
+  return PS_NewInteger(a / b);
 }
 
 NUM_FUNC(PS_Div,
@@ -443,9 +443,8 @@ static int PS_EqRaw(const struct ps_value_t *v) {
     return INFIX(==, PS_AsFloat);
     
   case t_string:
-    return INFIX(==, PS_GetType) && CALL2(strcmp, PS_GetString) == 0;
-    
   case t_variable:
+  case t_builtin_func:
     return INFIX(==, PS_GetType) && CALL2(strcmp, PS_GetString) == 0;
 
   case t_list:
@@ -547,7 +546,8 @@ struct ps_value_t *PS_And(const struct ps_value_t *v) {
     }							\
   }							\
 
-FLOAT1_FUNC(PS_Int, PS_NewInteger((int) F1));
+FLOAT1_FUNC(PS_Abs, PS_NewFloat(fabs(F1)));
+FLOAT1_FUNC(PS_Int, PS_NewInteger((int64_t) F1));
 FLOAT1_FUNC(PS_Ceiling, PS_NewFloat(ceil(F1)));
 FLOAT1_FUNC(PS_Floor, PS_NewFloat(floor(F1)));
 FLOAT1_FUNC(PS_Log, PS_NewFloat(log(F1)));
@@ -600,6 +600,73 @@ static struct ps_value_t *Reduce(const ps_func_t func, const struct ps_value_t *
 
   return ret;
   
+ err:
+  return NULL;
+}
+
+struct ps_value_t *PS_Map(const struct ps_value_t *v) {
+  size_t len, num, count, arg_count;
+  const char *func_name;
+  struct ps_value_t *func, *ret, *val, *arg, *arg_list;
+
+  if ((len = VerifyArgs(v, 2, SIZE_MAX, NULL)) < 0)
+    goto err;
+  
+  func = PS_GetItem(v, 0);
+  if (PS_GetType(func) != t_builtin_func && PS_GetType(func) != t_string) {
+    fprintf(stderr, "First argument to map must be a function or string\n");
+    goto err;
+  }
+  func_name = PS_GetString(func);
+  
+  num = PS_ItemCount(PS_GetItem(v, 1));
+  for (count = 1; count < len; count++) {
+    arg = PS_GetItem(v, count);
+    if (PS_GetType(arg) != t_list) {
+      fprintf(stderr, "Second and later arguments to map must be a list\n");
+      goto err;
+    }
+    if (PS_ItemCount(arg) != num) {
+      fprintf(stderr, "Arguments to map are not all the same length");
+      goto err;
+    }
+  }
+  
+  if ((ret = PS_NewList()) == NULL)
+    goto err;
+  
+  for (count = 0; count < num; count++) {
+    if ((arg_list = PS_NewList()) == NULL)
+      goto err2;
+    
+    for (arg_count = 1; arg_count < len; arg_count++) {
+      if (PS_AppendCopyToList(arg_list, PS_GetItem(PS_GetItem(v, arg_count), count)) < 0) {
+	fprintf(stderr, "Could not assemble argument list for map\n");
+	goto err2;
+      }
+    }
+    
+    if ((val = PS_CallByName(func_name, arg_list)) == NULL) {
+      fprintf(stderr, "Error evaluating map function\n");
+      goto err3;
+    }
+    
+    if (PS_AppendToList(ret, val) < 0) {
+      fprintf(stderr, "Could not build map result\n");
+      goto err4;
+    }
+    
+    PS_FreeValue(arg_list);
+  }
+  
+  return ret;
+
+ err4:
+  PS_FreeValue(val);
+ err3:
+  PS_FreeValue(arg_list);
+ err2:
+  PS_FreeValue(ret);
  err:
   return NULL;
 }

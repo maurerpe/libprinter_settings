@@ -54,6 +54,7 @@ struct ps_value_t *PS_Not(const struct ps_value_t *v);
 struct ps_value_t *PS_Or(const struct ps_value_t *v);
 struct ps_value_t *PS_And(const struct ps_value_t *v);
 
+struct ps_value_t *PS_Abs(const struct ps_value_t *v);
 struct ps_value_t *PS_Int(const struct ps_value_t *v);
 struct ps_value_t *PS_Ceiling(const struct ps_value_t *v);
 struct ps_value_t *PS_Floor(const struct ps_value_t *v);
@@ -61,6 +62,7 @@ struct ps_value_t *PS_Log(const struct ps_value_t *v);
 struct ps_value_t *PS_Radians(const struct ps_value_t *v);
 struct ps_value_t *PS_Sqrt(const struct ps_value_t *v);
 struct ps_value_t *PS_Tan(const struct ps_value_t *v);
+struct ps_value_t *PS_Map(const struct ps_value_t *v);
 struct ps_value_t *PS_Max(const struct ps_value_t *v);
 struct ps_value_t *PS_Min(const struct ps_value_t *v);
 struct ps_value_t *PS_Round(const struct ps_value_t *v);

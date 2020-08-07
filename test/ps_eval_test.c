@@ -102,7 +102,10 @@ void EvalTest2(struct ps_value_t *expr, const char *ext, struct ps_value_t *test
 
   if (PS_AddMember(dflt, "#global", v) < 0)
     exit(1);
-
+  
+  if (PS_AddBuiltin(v, NULL) < 0)
+    exit(1);
+  
   if ((v = PS_NewObject()) == NULL)
     exit(1);
 
@@ -203,6 +206,10 @@ int main(void) {
   
   v = ParseTest("extruderValues('test')", "#global");
   EvalTest2(v, "0", PS_NewFloat(1.7), "1", PS_NewString("hi"));
+  PS_FreeValue(v);
+  
+  v = ParseTest("map(abs, extruderValues('test'))", "#global");
+  EvalTest2(v, "0", PS_NewFloat(-3.14), "1", PS_NewFloat(3));
   PS_FreeValue(v);
   
   return 0;

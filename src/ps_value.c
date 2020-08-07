@@ -163,6 +163,34 @@ struct ps_value_t *PS_NewVariableLen(const char *v, size_t len) {
   return NULL;
 }
 
+struct ps_value_t *PS_NewBuiltinFunc(const char *v) {
+  struct ps_value_t *ps;
+
+  if ((ps = PS_NewString(v)) == NULL)
+    goto err;
+
+  ps->type = t_builtin_func;
+  
+  return ps;
+  
+ err:
+  return NULL;
+}
+
+struct ps_value_t *PS_NewBuiltinFuncLen(const char *v, size_t len) {
+  struct ps_value_t *ps;
+
+  if ((ps = PS_NewStringLen(v, len)) == NULL)
+    goto err;
+
+  ps->type = t_builtin_func;
+  
+  return ps;
+  
+ err:
+  return NULL;
+}
+
 #define INIT_LIST_SZ 16
 
 struct ps_value_t *PS_NewList(void) {
@@ -193,15 +221,15 @@ struct ps_value_t *PS_NewList(void) {
   return NULL;
 }
 
-struct ps_value_t *PS_NewFunction(const char *name) {
+struct ps_value_t *PS_NewFunction(const struct ps_value_t *func) {
   struct ps_value_t *ps, *nn;
 
   if ((ps = PS_NewList()) == NULL)
     goto err;
 
   ps->type = t_function;
-  if (name) {
-    if ((nn = PS_NewString(name)) == NULL)
+  if (func) {
+    if ((nn = PS_CopyValue(func)) == NULL)
       goto err2;
 
     if (PS_AppendToList(ps, nn) < 0)
@@ -258,6 +286,7 @@ void PS_FreeValue(struct ps_value_t *v) {
   switch (v->type) {
   case t_string:
   case t_variable:
+  case t_builtin_func:
     free(v->v.v_string);
     break;
     
@@ -326,6 +355,7 @@ int64_t PS_AsInteger(const struct ps_value_t *v) {
     return strtod(v->v.v_string, NULL);
 
   case t_variable:
+  case t_builtin_func:
     return 0;
 
   default:
@@ -353,7 +383,9 @@ const char *PS_GetString(const struct ps_value_t *str_var) {
   if (str_var == NULL)
     return NULL;
   
-  if (str_var->type != t_string && str_var->type != t_variable)
+  if (str_var->type != t_string &&
+      str_var->type != t_variable &&
+      str_var->type != t_builtin_func)
     return NULL;
 
   return str_var->v.v_string;
@@ -449,6 +481,7 @@ struct ps_value_t *PS_CopyValue(const struct ps_value_t *v) {
   switch (v->type) {
   case t_string:
   case t_variable:
+  case t_builtin_func:
     if ((ps = PS_NewValue(v->type)) == NULL)
       return NULL;
     if ((ps->v.v_string = strdup(v->v.v_string)) == NULL) {
@@ -499,7 +532,9 @@ int PS_AppendToString(struct ps_value_t *str, const char *append) {
   if (str == NULL || append == NULL)
     return -1;
   
-  if (str->type != t_string && str->type != t_variable)
+  if (str->type != t_string &&
+      str->type != t_variable &&
+      str->type != t_builtin_func)
     return -1;
 
   len1 = strlen(str->v.v_string);
@@ -551,6 +586,23 @@ int PS_AppendToList(struct ps_value_t *list, struct ps_value_t *v) {
   head->v[head->num_elem++] = v;
   
   return 0;
+}
+
+int PS_AppendCopyToList(struct ps_value_t *list, const struct ps_value_t *v) {
+  struct ps_value_t *copy;
+  
+  if ((copy = PS_CopyValue(v)) == NULL)
+    goto err;
+
+  if (PS_AppendToList(list, copy) < 0)
+    goto err2;
+
+  return 0;
+  
+ err2:
+  PS_FreeValue(copy);
+ err:
+  return -1;
 }
 
 struct ps_value_t *PS_PopFromList(struct ps_value_t *list) {
@@ -704,6 +756,15 @@ static ssize_t WriteValueIndent(struct ps_ostream_t *os, const struct ps_value_t
   case t_variable:
     return PS_WriteJsonStr(os, v->v.v_string, v->type == t_string);
 
+  case t_builtin_func:
+    if (PS_WriteStr(os, "builtin<") < 0)
+      return -1;
+    if (PS_WriteJsonStr(os, v->v.v_string, 0) < 0)
+      return -1;
+    if (PS_WriteStr(os, ">") < 0)
+      return -1;
+    return 0;
+    
   case t_list:
   case t_function:
     bytes = 0;

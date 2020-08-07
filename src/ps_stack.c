@@ -153,14 +153,14 @@ struct ps_value_t *PS_CollapseStack(struct ps_value_t *stack, ssize_t new_level)
   return NULL;
 }
 
-int PS_OpenGrouping(struct ps_value_t *stack, const char *func_name) {
+int PS_OpenGrouping(struct ps_value_t *stack, const struct ps_value_t *func) {
   struct ps_value_t *a, *b;
   
   if ((a = PS_NewList()) == NULL)
     goto err;
   
-  if (func_name)
-    b = PS_NewFunction(func_name);
+  if (func)
+    b = PS_NewFunction(func);
   else
     b = PS_NewList();
   if (b == NULL)

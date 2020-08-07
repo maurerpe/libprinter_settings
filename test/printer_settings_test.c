@@ -56,8 +56,10 @@ int main(void) {
   if ((PS_AppendToList(search, PS_NewString("/usr/share/cura/resources/extruders"))) < 0)
     exit(1);
 
-  if ((ps = PS_New("test.def.json", search)) == NULL)
+  if ((ps = PS_New("test.def.json", search)) == NULL) {
+    fprintf(stderr, "Could not create printer settings\n");
     exit(1);
+  }
 
   if ((os = PS_NewFileOStream(stdout)) == NULL)
     exit(1);

@@ -383,7 +383,7 @@ libprinter_settings_la_SOURCES = binary_tree.c ps_ostream.c ps_value.c \
 	ps_math.c ps_path.c ps_parse_json.c ps_eval.c ps_context.c \
 	ps_stack.c ps_slice.c printer_settings.c $(am__append_1) \
 	$(am__append_2)
-libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_' -no-undefined
+libprinter_settings_la_LDFLAGS = -export-symbols-regex '^PS_' -no-undefined -version-info 1:0:0
 noinst_LTLIBRARIES = libbinary_tree.la
 libbinary_tree_la_SOURCES = binary_tree.c
 libbinary_tree_la_LDFLAGS = -no-undefined

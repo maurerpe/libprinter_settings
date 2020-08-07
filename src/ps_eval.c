@@ -130,7 +130,8 @@ struct func_prop_t {
 };
 
 const struct func_prop_t func_prop[] =
-  {{"defaultExtruderPosition", PS_DEP,     0, 0},
+  {{"abs",                     PS_Abs,     1, 1},
+   {"defaultExtruderPosition", PS_DEP,     0, 0},
    {"int",                     PS_Int,     1, 1},
    {"math.ceil",               PS_Ceiling, 1, 1},
    {"math.floor",              PS_Floor,   1, 1},
@@ -138,58 +139,141 @@ const struct func_prop_t func_prop[] =
    {"math.radians",            PS_Radians, 1, 1},
    {"math.sqrt",               PS_Sqrt,    1, 1},
    {"math.tan",                PS_Tan,     1, 1},
+   {"map",                     PS_Map,     2, SIZE_MAX},
    {"max",                     PS_Max,     1, 2},
    {"min",                     PS_Min,     1, 2},
    {"round",                   PS_Round,   1, 2},
    {"sum",                     PS_Sum,     1, 1},
    {"len",                     PS_Len,     1, 1}};
 
-static struct ps_value_t *FuncEval(const struct ps_value_t *v, struct ps_context_t *ctx) {
-  const char *name;
-  struct ps_value_t *ve, *arg, *ret;
+int PS_AddBuiltin(struct ps_value_t *v, const char *key) {
+  struct ps_value_t *memb, *func;
   size_t count;
   
-  if ((name = PS_GetString(PS_GetItem(v, 0))) == NULL)
+  if (v == NULL) {
+    fprintf(stderr, "Invalid object to add built-in symbols\n");
     goto err;
+  }
+  
+  for (count = 0; count < sizeof(func_prop)/sizeof(func_prop[0]); count++) {
+    if ((memb = PS_GetMember(v, func_prop[count].name, NULL)) == NULL) {
+      if (key == NULL) {
+	if ((func = PS_NewBuiltinFunc(func_prop[count].name)) == NULL) {
+	  fprintf(stderr, "Could not create built-in function symbol\n");
+	  goto err;
+	}
+    
+	if (PS_AddMember(v, func_prop[count].name, func) < 0) {
+	  fprintf(stderr, "Could not add built-in function symbol\n");
+	  goto err2;
+	}
+	
+	continue;
+      }
+      
+      if ((memb = PS_NewObject()) == NULL) {
+	fprintf(stderr, "Could not create object for built-in symbols\n");
+	goto err;
+      }
+
+      if ((PS_AddMember(v, func_prop[count].name, memb)) < 0) {
+	PS_FreeValue(memb);
+	fprintf(stderr, "Could add parent for built-in symbols\n");
+	goto err;
+      }
+    }
+    
+    if (key == NULL)
+      continue;
+    
+    if (PS_GetMember(memb, key, NULL) != NULL)
+      continue;
+    
+    if ((func = PS_NewBuiltinFunc(func_prop[count].name)) == NULL) {
+      fprintf(stderr, "Could not create built-in function symbol\n");
+      goto err;
+    }
+    
+    if (PS_AddMember(memb, key, func) < 0) {
+      fprintf(stderr, "Could not add built-in function symbol\n");
+      goto err2;
+    }
+  }
+  
+  return 0;
+  
+ err2:
+  PS_FreeValue(func);
+ err:
+  return -1;
+}
+
+struct ps_value_t *PS_CallByName(const char *name, struct ps_value_t *args) {
+  size_t count;
+  
+  for (count = 0; count < sizeof(oper_prop)/sizeof(oper_prop[0]); count++) {
+    if (strcmp(name, oper_prop[count].name) == 0) {
+      return oper_prop[count].func(args);
+    }
+  }
+  
+  for (count = 0; count < sizeof(func_prop)/sizeof(func_prop[0]); count++) {
+    if (strcmp(name, func_prop[count].name) == 0) {
+      return func_prop[count].func(args);
+    }
+  }
+
+  fprintf(stderr, "Unknown function %s\n", name);
+  return NULL;
+}
+
+static int IsMacro(const char *name) {
+  size_t count;
+  
+  for (count = 0; count < sizeof(macro_prop)/sizeof(macro_prop[0]); count++)
+    if (strcmp(name, macro_prop[count].name) == 0)
+      return 1;
+
+  return 0;
+}
+
+static struct ps_value_t *FuncEval(const struct ps_value_t *v, struct ps_context_t *ctx) {
+  const char *name;
+  struct ps_value_t *func, *ve, *arg, *ret;
+  size_t count;
+  
+  if ((func = PS_Eval(PS_GetItem(v, 0), ctx)) == NULL)
+    goto err;
+  if ((name = PS_GetString(func)) == NULL)
+    goto err2;
   
   for (count = 0; count < sizeof(macro_prop)/sizeof(macro_prop[0]); count++)
     if (strcmp(name, macro_prop[count].name) == 0)
       return macro_prop[count].func(v, ctx);
   
   if ((ve = PS_NewList()) == NULL)
-    goto err;
+    goto err2;
   
   for (count = 1; count < PS_ItemCount(v); count++) {
     if ((arg = PS_Eval(PS_GetItem(v, count), ctx)) == NULL)
-      goto err2;
+      goto err3;
 
     if (PS_AppendToList(ve, arg) < 0)
-      goto err3;
+      goto err4;
   }
   
-  for (count = 0; count < sizeof(oper_prop)/sizeof(oper_prop[0]); count++) {
-    if (strcmp(name, oper_prop[count].name) == 0) {
-      ret = oper_prop[count].func(ve);
-      PS_FreeValue(ve);
-      return ret;
-    }
-  }
+  if ((ret = PS_CallByName(name, ve)) == NULL)
+    goto err3;
   
-  for (count = 0; count < sizeof(func_prop)/sizeof(func_prop[0]); count++) {
-    if (strcmp(name, func_prop[count].name) == 0) {
-      ret = func_prop[count].func(ve);
-      PS_FreeValue(ve);
-      return ret;
-    }
-  }
-
-  fprintf(stderr, "Unknown function %s", name);
-  goto err2;
-  
- err3:
-  PS_FreeValue(arg);
- err2:
   PS_FreeValue(ve);
+  return ret;
+  
+ err4:
+  PS_FreeValue(arg);
+ err3:
+  PS_FreeValue(ve);
+ err2:
+  PS_FreeValue(func);
  err:
   return NULL;
 }
@@ -570,8 +654,14 @@ static int AddOper(struct ps_value_t *stack, struct ps_value_t *oper, enum expr_
     }
     
     if (prev_type == e_bareword) {
-      PS_VariableToString(prev);
-      if (PS_OpenGrouping(stack, PS_GetString(prev)) < 0)
+      if (IsMacro(PS_GetString(prev))) {
+	PS_VariableToString(prev);
+      } else {
+	if (AddDep(prev, ext, dep) < 0)
+	  goto err;
+      }
+      
+      if (PS_OpenGrouping(stack, prev) < 0)
 	goto err;
       
       PS_FreeValue(prev);

@@ -40,7 +40,7 @@ size_t PS_StackArgLength(struct ps_value_t *stack);
 int PS_ExpandStack(struct ps_value_t *stack, size_t new_level);
 int PS_PushStack(struct ps_value_t *stack, struct ps_value_t *v);
 struct ps_value_t *PS_CollapseStack(struct ps_value_t *stack, ssize_t new_level);
-int PS_OpenGrouping(struct ps_value_t *stack, const char *func_name);
+int PS_OpenGrouping(struct ps_value_t *stack, const struct ps_value_t *func);
 struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, int final, int *was_func);
 
 #endif

@@ -159,7 +159,7 @@ static struct ps_value_t *LoadFileChain(const char *file, const struct ps_value_
     PS_ValueForeach(v, MergeMember, &merge);
     file = PS_GetString(PS_GetMember(v, "inherits", NULL));
   }
-  
+
   if (IndexSettings(pdef) < 0)
     goto err2;
   
@@ -389,6 +389,11 @@ struct ps_value_t *PS_New(const char *printer, const struct ps_value_t *search) 
     goto err2;
   if (PS_AddMember(ps, "#global", v) < 0)
     goto err3;
+  
+  if (PS_AddBuiltin(PS_GetMember(PS_GetMember(ps, "#global", NULL), "#set", NULL), "default_value") < 0) {
+    fprintf(stderr, "Could not load builtin symbols\n");
+    goto err2;
+  }
   
   if ((c = PS_GetMember(PS_GetMember(v, "metadata", NULL), "machine_extruder_trains", NULL)) == NULL) {
     fprintf(stderr, "Could not find metadata -> machine_extruder_trains in printer definition\n");
