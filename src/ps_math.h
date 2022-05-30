@@ -68,6 +68,7 @@ struct ps_value_t *PS_Min(const struct ps_value_t *v);
 struct ps_value_t *PS_Round(const struct ps_value_t *v);
 struct ps_value_t *PS_Sum(const struct ps_value_t *v);
 struct ps_value_t *PS_Len(const struct ps_value_t *v);
+struct ps_value_t *PS_Any(const struct ps_value_t *v);
 
 struct ps_value_t *PS_DEP(const struct ps_value_t *v);
 

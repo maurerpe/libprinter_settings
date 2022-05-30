@@ -144,7 +144,8 @@ const struct func_prop_t func_prop[] =
    {"min",                     PS_Min,     1, 2},
    {"round",                   PS_Round,   1, 2},
    {"sum",                     PS_Sum,     1, 1},
-   {"len",                     PS_Len,     1, 1}};
+   {"len",                     PS_Len,     1, 1},
+   {"any",                     PS_Any,     1, 1}};
 
 int PS_AddBuiltin(struct ps_value_t *v, const char *key) {
   struct ps_value_t *memb, *func;

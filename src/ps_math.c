@@ -783,6 +783,30 @@ struct ps_value_t *PS_Len(const struct ps_value_t *v) {
   }
 }
 
+struct ps_value_t *PS_Any(const struct ps_value_t *v) {
+  enum ps_type_t type;
+  struct ps_value_t *ps;
+  size_t count, len;
+  
+  if (VerifyArgs(v, 1, 1, &type) < 0)
+    return NULL;
+  
+  switch (type) {
+  case t_list:
+    ps = PS_GetItem(v, 0);
+    len = PS_ItemCount(ps);
+    for (count = 0; count < len; count++) {
+      if (PS_AsBoolean(PS_GetItem(ps, count)))
+	return PS_CopyValue(PS_GetItem(ps, count));
+    }
+    return PS_NewBoolean(0);
+    
+  default:
+      fprintf(stderr, "Wrong type args to function PS_Any\n");
+      return NULL;
+  }
+}
+
 // defaultExtruderPosition
 struct ps_value_t *PS_DEP(const struct ps_value_t *v) {
   if (VerifyArgs(v, 0, 0, NULL) < 0)
