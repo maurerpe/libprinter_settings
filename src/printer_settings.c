@@ -761,9 +761,7 @@ static int CheckType(const struct ps_value_t *type, const struct ps_value_t *val
   vtype = PS_GetType(val);
   
   if (strcmp(str, "str") == 0 ||
-      strcmp(str, "enum") == 0 ||
-      strcmp(str, "extruder") == 0 ||
-      strcmp(str, "optional_extruder") == 0)
+      strcmp(str, "enum") == 0)
     return vtype == t_string ? 0 : -1;
     
   if (strcmp(str, "bool") == 0)
@@ -774,7 +772,11 @@ static int CheckType(const struct ps_value_t *type, const struct ps_value_t *val
   
   if (str[0] == '[' || strcmp(str, "polygons") == 0)
     return vtype == t_list ? 0 : -1;
-  
+
+  if (strcmp(str, "extruder") == 0 ||
+      strcmp(str, "optional_extruder") == 0)
+    return (vtype == t_string || vtype == t_integer) ? 0 : -1;
+
   return 0;
 }
 

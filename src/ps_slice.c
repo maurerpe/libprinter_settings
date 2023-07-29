@@ -175,7 +175,7 @@ static int AddSettings(struct args_t *args, const struct ps_value_t *settings) {
   return -1;
 }
 
-static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files) {
+static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files, const char *out_file) {
   struct ps_value_t *set, *dflt, *model_set;
   size_t count;
   
@@ -185,15 +185,26 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
   if (AddArg(args, "slice") < 0)
     goto err;
 
+#ifdef DEBUG
   if (AddArg(args, "-v") < 0)
     goto err;
   
+  if (AddArg(args, "-m1") < 0)
+    goto err3;
+#endif
+
   if (AddArg(args, "-j") < 0)
     goto err;
   
   if (AddArg(args, PS_GetPrinter(ps)) < 0)
     goto err;
   
+  if (AddArg(args, "-o") < 0)
+    goto err;
+
+  if (AddArg(args, out_file) < 0)
+    goto err;
+
   if ((dflt = PS_GetDefaults(ps)) == NULL)
     goto err;
   
@@ -201,13 +212,10 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
     goto err2;
 
   printf("Pruning global settings\n");
-  if (PS_PruneSettings(set, dflt) < 0)
-    goto err3;
-  
-  if (AddSettings(args, set) < 0)
-    goto err3;
-  
   if (PS_MergeSettings(dflt, set) < 0)
+    goto err3;
+
+  if (AddSettings(args, dflt) < 0)
     goto err3;
   
   for (count = 0; count < num_files; count++) {
@@ -247,6 +255,7 @@ static int BuildArgs(struct args_t *args, const struct ps_value_t *ps, const str
 int PS_SliceFiles(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const struct ps_value_t *settings, const struct ps_slice_file_t *files, size_t num_files) {
   struct args_t args;
   struct ps_ostream_t *os;
+  struct ps_out_file_t *of;
   
   if ((os = PS_NewFileOStream(stdout)) != NULL) {
     printf("Using base settings:\n");
@@ -255,24 +264,33 @@ int PS_SliceFiles(struct ps_ostream_t *gcode, const struct ps_value_t *ps, const
     PS_FreeOStream(os);
   }
   
-  if (InitArgs(&args) < 0)
+  if ((of = PS_OutFile_New()) == NULL)
     goto err;
   
-  if (BuildArgs(&args, ps, settings, files, num_files) < 0)
+  if (InitArgs(&args) < 0)
     goto err2;
   
+  if (BuildArgs(&args, ps, settings, files, num_files, PS_OutFile_GetName(of)) < 0)
+    goto err3;
+
 #ifdef DEBUG
   PrintArgs(&args);
 #endif
   
-  if (PS_ExecArgs(args.a, NULL, gcode, PS_GetSearch(ps)) < 0)
-    goto err2;
+  if (PS_ExecArgs(args.a, NULL, NULL, PS_GetSearch(ps)) < 0)
+    goto err3;
+
+  if (PS_OutFile_ReadToStream(of, gcode) < 0)
+    goto err3;
 
   DestroyArgs(&args);
+  PS_OutFile_Free(of);
   return 0;
 
- err2:
+ err3:
   DestroyArgs(&args);
+ err2:
+  PS_OutFile_Free(of);
  err:
   return -1;
 }

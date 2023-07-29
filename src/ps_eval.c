@@ -584,7 +584,7 @@ static enum expr_type_t NextAtom(const char **str, const char **end) {
     break;
   }
   
-  if (isdigit(*cur)) {
+  if (isdigit(*cur) || *cur == '.') {
     do {
       cur++;
     } while (isalnum(*cur) || *cur == '_' || *cur == '.');
@@ -593,7 +593,7 @@ static enum expr_type_t NextAtom(const char **str, const char **end) {
     return e_number;
   }
   
-  if (isalpha(*cur)) {
+  if (isalpha(*cur) || *cur == '_') {
     do {
       cur++;
     } while (isalnum(*cur) || *cur == '_' || *cur == '.');

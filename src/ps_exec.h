@@ -39,6 +39,12 @@
 char *PS_WriteToTempFile(const char *model_str, size_t len);
 int PS_DeleteFile(const char *filename);
 
+struct ps_out_file_t;
+struct ps_out_file_t *PS_OutFile_New(void);
+void PS_OutFile_Free(struct ps_out_file_t *of);
+const char *PS_OutFile_GetName(const struct ps_out_file_t *of);
+int PS_OutFile_ReadToStream(struct ps_out_file_t *of, struct ps_ostream_t *os);
+
 int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *stdout_os, const struct ps_value_t *search);
 
 #endif

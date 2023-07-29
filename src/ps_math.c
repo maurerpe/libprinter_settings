@@ -839,6 +839,8 @@ struct ps_value_t *PS_ResolveOrValue(const struct ps_value_t *v, struct ps_conte
 struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_context_t *ctx) {
   struct ps_value_t *ext, *ret;
   const char *str;
+  char buf[256];
+  struct ps_ostream_t *os;
   
   if (v == NULL || PS_GetType(v) != t_function || PS_ItemCount(v) != 3)
     goto err;
@@ -848,8 +850,17 @@ struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_contex
 
   if (PS_GetType(ext) == t_string) {
     str = PS_GetString(ext);
+  } else if (PS_GetType(ext) == t_integer) {
+    snprintf(buf, sizeof(buf), "%lld", (long long) PS_AsInteger(ext));
+    buf[sizeof(buf) - 1] = '\0';
+    str = buf;
   } else {
-    fprintf(stderr, "Extruder name must be a string, assuming \"0\"\n");
+    if ((os = PS_NewStrOStream()) == NULL)
+      goto err2;
+    if (PS_WriteValue(os, ext) < 0)
+      goto err3;
+    fprintf(stderr, "Extruder name must be a string (got '%s'), assuming \"0\"\n", PS_OStreamContents(os));
+    PS_FreeOStream(os);
     str = "0";
   }
   
@@ -862,7 +873,9 @@ struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_contex
   PS_FreeValue(ext);
   
   return ret;
-  
+
+ err3:
+  PS_FreeOStream(os);
  err2:
   PS_FreeValue(ext);
  err:

@@ -122,6 +122,51 @@ static int ReadToStream(int fd, struct ps_ostream_t *os) {
   }
 }
 
+struct ps_out_file_t {
+  int fd;
+  char *filename;
+};
+
+struct ps_out_file_t *PS_OutFile_New(void) {
+  struct ps_out_file_t *of;
+
+  if ((of = malloc(sizeof(*of))) == NULL)
+    goto err;
+
+  if ((of->filename = strdup("/tmp/printer_settings_XXXXXX.gcode")) == NULL)
+    goto err2;
+
+  if ((of->fd = mkstemps(of->filename, 6)) < 0)
+    goto err3;
+
+  return of;
+
+ err3:
+  free(of->filename);
+ err2:
+  free(of);
+ err:
+  return NULL;
+}
+
+void PS_OutFile_Free(struct ps_out_file_t *of) {
+  if (of == NULL)
+    return;
+
+  close(of->fd);
+  PS_DeleteFile(of->filename);
+  free(of->filename);
+  free(of);
+}
+
+const char *PS_OutFile_GetName(const struct ps_out_file_t *of) {
+  return of->filename;
+}
+
+int PS_OutFile_ReadToStream(struct ps_out_file_t *of, struct ps_ostream_t *os) {
+  return ReadToStream(of->fd, os);
+}
+
 static int SetSearchEnv(const struct ps_value_t *search) {
   struct ps_ostream_t *os;
   struct ps_value_iterator_t *vi;
@@ -170,7 +215,7 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   if (pipe(in_pipe) < 0)
     goto err;
 
-  if (pipe(out_pipe) < 0)
+  if (stdout_os && pipe(out_pipe) < 0)
     goto err2;
   
   switch ((pid = fork())) {
@@ -180,14 +225,16 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   case 0:
     /* Child */
     close(in_pipe[1]);
-    close(out_pipe[0]);
     if (dup2(in_pipe[0], 0) < 0) {
       perror("Cannot set pipe to stdin");
       exit(1);
     }
-    if (dup2(out_pipe[1], 1) < 0) {
-      perror("Cannot set pipe to stdout");
-      exit(1);
+    if (stdout_os) {
+      close(out_pipe[0]);
+      if (dup2(out_pipe[1], 1) < 0) {
+	perror("Cannot set pipe to stdout");
+	exit(1);
+      }
     }
     if (SetSearchEnv(search) < 0)
       exit(1);
@@ -199,17 +246,20 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
   default:
     /* Parent */
     close(in_pipe[0]);
-    close(out_pipe[1]);
+    if (stdout_os)
+      close(out_pipe[1]);
 
     if (stdin_str && WriteStr(in_pipe[1], stdin_str) < 0)
       goto err5;
     
     close(in_pipe[1]);
 
-    if (stdout_os && ReadToStream(out_pipe[0], stdout_os) < 0)
-      goto err4;
+    if (stdout_os) {
+      if (ReadToStream(out_pipe[0], stdout_os) < 0)
+	goto err4;
+      close(out_pipe[0]);
+    }
     
-    close(out_pipe[0]);
     waitpid(pid, &status, 0);
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
       return -1;
@@ -220,13 +270,16 @@ int PS_ExecArgs(char * const *args, const char *stdin_str, struct ps_ostream_t *
  err5:
   close(in_pipe[1]);
  err4:
-  close(out_pipe[0]);
+  if (stdout_os)
+    close(out_pipe[0]);
   waitpid(pid, NULL, 0);
   return -1;
   
  err3:
-  close(out_pipe[0]);
-  close(out_pipe[1]);
+  if (stdout_os) {
+    close(out_pipe[0]);
+    close(out_pipe[1]);
+  }
  err2:
   close(in_pipe[0]);
   close(in_pipe[1]);
