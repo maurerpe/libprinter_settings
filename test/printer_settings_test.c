@@ -36,26 +36,16 @@
 #include "ps_ostream.h"
 #include "ps_slice.h"
 
-#ifdef WIN32
-#define PSIZE "I"
-#else
-#define PSIZE "z"
-#endif
-
 int main(void) {
   struct ps_value_t *ps, *search, *ext, *set;
   struct ps_ostream_t *os, *stl;
   FILE *file;
   char buf[4096];
   size_t len;
-
-  if ((search = PS_NewList()) == NULL)
+  
+  if ((search = PS_GetDefaultSearch()) == NULL)
     exit(1);
-  if ((PS_AppendToList(search, PS_NewString("/usr/share/cura/resources/definitions"))) < 0)
-    exit(1);
-  if ((PS_AppendToList(search, PS_NewString("/usr/share/cura/resources/extruders"))) < 0)
-    exit(1);
-
+  
   if ((ps = PS_New("test.def.json", search)) == NULL) {
     fprintf(stderr, "Could not create printer settings\n");
     exit(1);
@@ -66,7 +56,7 @@ int main(void) {
 
   if ((ext = PS_ListExtruders(ps)) == NULL)
     exit(1);
-  printf("Num extruders = %" PSIZE "u: ", PS_ItemCount(ext) - 1);
+  printf("Num extruders = %zu: ", PS_ItemCount(ext) - 1);
   PS_WriteValue(os, ext);
   printf("\n");
   
@@ -100,7 +90,7 @@ int main(void) {
   if ((stl = PS_NewStrOStream()) == NULL)
     exit(1);
 
-  if ((file = fopen("test_widget.stl", "r")) == NULL)
+  if ((file = fopen("test_widget.stl", "rb")) == NULL)
     exit(1);
 
   while (!feof(file)) {

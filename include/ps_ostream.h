@@ -38,7 +38,7 @@ struct ps_ostream_t *PS_NewStrOStream(void);
 void PS_OStreamReset(struct ps_ostream_t *os);
 void PS_FreeOStream(struct ps_ostream_t *os);
 
-int PS_WriteBuf(struct ps_ostream_t *os, const void *buf, size_t len);
+ssize_t PS_WriteBuf(struct ps_ostream_t *os, const void *buf, size_t len);
 int PS_WriteStr(struct ps_ostream_t *os, const char *str);
 int PS_WriteChar(struct ps_ostream_t *os, const char c);
 int PS_Printf(struct ps_ostream_t *os, const char *format, ...);

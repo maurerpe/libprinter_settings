@@ -43,6 +43,7 @@ extern "C" {
 #include "ps_ostream.h"
 #include "ps_parse_json.h"
 
+struct ps_value_t *PS_GetDefaultSearch(void);
 struct ps_value_t *PS_New(const char *printer, const struct ps_value_t *search);
 
 const char *PS_GetPrinter(const struct ps_value_t *ps);

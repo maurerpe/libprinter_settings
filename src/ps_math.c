@@ -94,12 +94,6 @@ struct ps_value_t *PS_Call2(const ps_func_t func, const struct ps_value_t *v1, c
   return NULL;
 }
 
-#ifdef WIN32
-#define PSIZE "I"
-#else
-#define PSIZE "z"
-#endif
-
 static ssize_t VerifyArgs(const struct ps_value_t *v, size_t min, size_t max, enum ps_type_t *type) {
   size_t len, count;
   enum ps_type_t tt;
@@ -111,7 +105,7 @@ static ssize_t VerifyArgs(const struct ps_value_t *v, size_t min, size_t max, en
   
   len = PS_ItemCount(v);
   if (min > len || len > max) {
-    fprintf(stderr, "Incorrect number of args: expected [%" PSIZE "u, %" PSIZE "u], found %" PSIZE "u\n", min, max, len);
+    fprintf(stderr, "Incorrect number of args: expected [%zu, %zu], found %zu\n", min, max, len);
     return -1;
   }
 

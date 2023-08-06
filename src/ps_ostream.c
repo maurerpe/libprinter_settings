@@ -127,7 +127,7 @@ int EnsureSpace(struct ps_ostream_t *os, size_t len) {
   return 1;
 }
 
-int PS_WriteBuf(struct ps_ostream_t *os, const void *buf, size_t len) {
+ssize_t PS_WriteBuf(struct ps_ostream_t *os, const void *buf, size_t len) {
   if (os->is_file) {
     return fwrite(buf, 1, len, os->file);
   }

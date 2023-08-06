@@ -40,6 +40,30 @@
 
 #include "ps_exec.h"
 
+struct ps_value_t *PS_GetDefaultSearch(void) {
+  struct ps_value_t *search, *str;
+  
+  if ((search = PS_NewList()) == NULL)
+    goto err;
+  if ((str = PS_NewString("/usr/share/cura/resources/definitions")) == NULL)
+    goto err2;
+  if (PS_AppendToList(search, str) < 0)
+    goto err3;
+  if ((str = PS_NewString("/usr/share/cura/resources/extruders")) == NULL)
+    goto err2;
+  if (PS_AppendToList(search, str) < 0)
+    goto err3;
+
+  return search;
+
+ err3:
+  PS_FreeValue(str);
+ err2:
+  PS_FreeValue(search);
+ err:
+  return NULL;
+}
+
 char *PS_WriteToTempFile(const char *model_str, size_t len) {
   char *str;
   int fd;
