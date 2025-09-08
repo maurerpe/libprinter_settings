@@ -47,6 +47,7 @@ int PS_CtxAddValue(struct ps_context_t *ctx, const char *ext, const char *name, 
 
 const struct ps_value_t *PS_CtxLookup(struct ps_context_t *ctx, const char *name);
 struct ps_value_t *PS_CtxLookupAll(struct ps_context_t *ctx, const char *name);
+struct ps_value_t *PS_CtxFirstTrue(struct ps_context_t *ctx, const char *name);
 int PS_CtxPush(struct ps_context_t *ctx, const char *ext);
 void PS_CtxPop(struct ps_context_t *ctx);
 

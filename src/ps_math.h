@@ -53,6 +53,7 @@ struct ps_value_t *PS_NEQ(const struct ps_value_t *v);
 struct ps_value_t *PS_Not(const struct ps_value_t *v);
 struct ps_value_t *PS_Or(const struct ps_value_t *v);
 struct ps_value_t *PS_And(const struct ps_value_t *v);
+struct ps_value_t *PS_In(const struct ps_value_t *v);
 
 struct ps_value_t *PS_Abs(const struct ps_value_t *v);
 struct ps_value_t *PS_Int(const struct ps_value_t *v);
@@ -76,5 +77,6 @@ struct ps_value_t *PS_ThenIfElse(const struct ps_value_t *v, struct ps_context_t
 struct ps_value_t *PS_ResolveOrValue(const struct ps_value_t *v, struct ps_context_t *ctx);
 struct ps_value_t *PS_ExtruderValue(const struct ps_value_t *v, struct ps_context_t *ctx);
 struct ps_value_t *PS_ExtruderValues(const struct ps_value_t *v, struct ps_context_t *ctx);
+struct ps_value_t *PS_AnyExt(const struct ps_value_t *v, struct ps_context_t *ctx);
 
 #endif

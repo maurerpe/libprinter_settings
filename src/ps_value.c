@@ -60,7 +60,7 @@ static struct ps_value_t ps_const_null = {t_null, SIZE_MAX >> 1, {0}};
 static struct ps_value_t ps_const_false = {t_boolean, SIZE_MAX >> 1, {0}};
 static struct ps_value_t ps_const_true = {t_boolean, SIZE_MAX >> 1, {1}};
 
-static struct ps_value_t *PS_NewValue(enum ps_type_t type) {
+static struct ps_value_t *NewValue(enum ps_type_t type) {
   struct ps_value_t *ps;
 
   if ((ps = malloc(sizeof(*ps))) == NULL) {
@@ -87,7 +87,7 @@ struct ps_value_t *PS_NewBoolean(int v) {
 struct ps_value_t *PS_NewInteger(int64_t v) {
   struct ps_value_t *ps;
   
-  if ((ps = PS_NewValue(t_integer)) == NULL)
+  if ((ps = NewValue(t_integer)) == NULL)
     return NULL;
   
   ps->v.v_integer = v;
@@ -97,7 +97,7 @@ struct ps_value_t *PS_NewInteger(int64_t v) {
 struct ps_value_t *PS_NewFloat(double v) {
   struct ps_value_t *ps;
   
-  if ((ps = PS_NewValue(t_float)) == NULL)
+  if ((ps = NewValue(t_float)) == NULL)
     return NULL;
   
   ps->v.v_float = v;
@@ -117,7 +117,7 @@ struct ps_value_t *PS_NewStringLen(const char *v, size_t len) {
   if (v == NULL)
     goto err;
   
-  if ((ps = PS_NewValue(t_string)) == NULL)
+  if ((ps = NewValue(t_string)) == NULL)
     goto err;
   
   if ((ps->v.v_string = malloc(len + 1)) == NULL) {
@@ -196,7 +196,7 @@ struct ps_value_t *PS_NewBuiltinFuncLen(const char *v, size_t len) {
 struct ps_value_t *PS_NewList(void) {
   struct ps_value_t *ps;
   
-  if ((ps = PS_NewValue(t_list)) == NULL)
+  if ((ps = NewValue(t_list)) == NULL)
     goto err;
   
   if ((ps->v.v_list = malloc(sizeof(*ps->v.v_list))) == NULL) {
@@ -257,7 +257,7 @@ static void FreeVoid(void *v) {
 struct ps_value_t *PS_NewObject(void) {
   struct ps_value_t *ps;
 
-  if ((ps = PS_NewValue(t_object)) == NULL)
+  if ((ps = NewValue(t_object)) == NULL)
     goto err;
   
   if ((ps->v.v_object = NewBinaryTree(CopyVoid, FreeVoid)) == NULL)
@@ -482,7 +482,7 @@ struct ps_value_t *PS_CopyValue(const struct ps_value_t *v) {
   case t_string:
   case t_variable:
   case t_builtin_func:
-    if ((ps = PS_NewValue(v->type)) == NULL)
+    if ((ps = NewValue(v->type)) == NULL)
       return NULL;
     if ((ps->v.v_string = strdup(v->v.v_string)) == NULL) {
       free(ps);
@@ -495,7 +495,7 @@ struct ps_value_t *PS_CopyValue(const struct ps_value_t *v) {
     return CopyList(v);
     
   case t_object:
-    if ((ps = PS_NewValue(t_object)) == NULL)
+    if ((ps = NewValue(t_object)) == NULL)
       return NULL;
     if ((ps->v.v_object = CopyBinaryTree(v->v.v_object)) == NULL) {
       free(ps);

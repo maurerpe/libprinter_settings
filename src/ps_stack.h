@@ -33,6 +33,12 @@
 
 #include "ps_value.h"
 
+enum ps_grouping_t {
+  pg_base,
+  pg_paren,
+  pg_square
+};
+
 struct ps_value_t *PS_NewStack(void);
 
 size_t PS_StackLength(struct ps_value_t *stack);
@@ -40,7 +46,7 @@ size_t PS_StackArgLength(struct ps_value_t *stack);
 int PS_ExpandStack(struct ps_value_t *stack, size_t new_level);
 int PS_PushStack(struct ps_value_t *stack, struct ps_value_t *v);
 struct ps_value_t *PS_CollapseStack(struct ps_value_t *stack, ssize_t new_level);
-int PS_OpenGrouping(struct ps_value_t *stack, const struct ps_value_t *func);
-struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, int final, int *was_func);
+int PS_OpenGrouping(struct ps_value_t *stack, enum ps_grouping_t grp, const struct ps_value_t *func);
+struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, enum ps_grouping_t grp, int *was_func);
 
 #endif

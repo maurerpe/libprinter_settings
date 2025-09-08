@@ -41,13 +41,14 @@
 #include "ps_ostream.h"
 #include "ps_stack.h"
 
-#define UNA 8
-#define EXP 7
-#define MUL 6
-#define ADD 5
-#define CMP 4
-#define ULG 3
-#define LOG 2
+#define UNA 9
+#define EXP 8
+#define MUL 7
+#define ADD 6
+#define CMP 5
+#define ULG 4
+#define LOG 3
+#define INL 2
 #define IFE 1
 #define FUN 0
 
@@ -88,12 +89,14 @@ struct macro_prop_t {
 static int VerifyExtruderValue(struct ps_value_t **v, const char *ext, struct ps_value_t *dep);
 static int VerifyExtruderValues(struct ps_value_t **v, const char *ext, struct ps_value_t *dep);
 static int VerifyResolveOrValue(struct ps_value_t **v, const char *ext, struct ps_value_t *dep);
+static int VerifyAnyExt(struct ps_value_t **v, const char *ext, struct ps_value_t *dep);
 
 const struct macro_prop_t macro_prop[] =
-  {{"if",             PS_ThenIfElse,     NULL,                 3, 3},
-   {"extruderValue",  PS_ExtruderValue,  VerifyExtruderValue,  2, 2},
-   {"extruderValues", PS_ExtruderValues, VerifyExtruderValues, 1, 1},
-   {"resolveOrValue", PS_ResolveOrValue, VerifyResolveOrValue, 1, 1}};
+  {{"if",                      PS_ThenIfElse,     NULL,                 3, 3},
+   {"extruderValue",           PS_ExtruderValue,  VerifyExtruderValue,  2, 2},
+   {"extruderValues",          PS_ExtruderValues, VerifyExtruderValues, 1, 1},
+   {"resolveOrValue",          PS_ResolveOrValue, VerifyResolveOrValue, 1, 1},
+   {"anyExtruderWithMaterial", PS_AnyExt,         VerifyAnyExt,         1, 1}};
 
 struct oper_prop_t {
   char *name;
@@ -118,6 +121,7 @@ const struct oper_prop_t oper_prop[] =
    {"not",  PS_Not,  ULG,  1},
    {"or",   PS_Or,   LOG,  2},
    {"and",  PS_And,  LOG,  2},
+   {"in",   PS_In,   INL,  2},
    {"if",   NULL,    IFE,  3},
    {"else", NULL,    IFE, -1},
    {",",    NULL,    FUN, -1}};
@@ -140,8 +144,8 @@ const struct func_prop_t func_prop[] =
    {"math.sqrt",               PS_Sqrt,    1, 1},
    {"math.tan",                PS_Tan,     1, 1},
    {"map",                     PS_Map,     2, SIZE_MAX},
-   {"max",                     PS_Max,     1, 2},
-   {"min",                     PS_Min,     1, 2},
+   {"max",                     PS_Max,     1, SIZE_MAX},
+   {"min",                     PS_Min,     1, SIZE_MAX},
    {"round",                   PS_Round,   1, 2},
    {"sum",                     PS_Sum,     1, 1},
    {"len",                     PS_Len,     1, 1},
@@ -331,6 +335,10 @@ static int VerifyResolveOrValue(struct ps_value_t **v, const char *ext, struct p
   return EvalLastArg(v, ext, dep);
 }
 
+static int VerifyAnyExt(struct ps_value_t **v, const char *ext, struct ps_value_t *dep) {
+  return EvalLastArg(v, NULL, dep);
+}
+
 static int VerifyFunc(struct ps_value_t **v, const char *ext, struct ps_value_t *dep) {
   size_t count, num_arg;
   const char *fname;
@@ -345,7 +353,7 @@ static int VerifyFunc(struct ps_value_t **v, const char *ext, struct ps_value_t 
   for (count = 0; count < sizeof(macro_prop)/sizeof(*macro_prop); count++) {
     if (strcmp(fname, macro_prop[count].name) == 0) {
       if (num_arg < macro_prop[count].min_arg || num_arg > macro_prop[count].max_arg) {
-	fprintf(stderr, "Incorrect number of args to macro '%s'\n", fname);
+	fprintf(stderr, "Incorrect number of args to macro '%s': %zu\n", fname, num_arg);
 	return -1;
       }
       
@@ -359,7 +367,7 @@ static int VerifyFunc(struct ps_value_t **v, const char *ext, struct ps_value_t 
   for (count = 0; count < sizeof(oper_prop)/sizeof(*oper_prop); count++) {
     if (strcmp(fname, oper_prop[count].name) == 0) {
       if (num_arg != oper_prop[count].num_args) {
-	fprintf(stderr, "Incorrect number of args to operator '%s'\n", fname);
+	fprintf(stderr, "Incorrect number of args to operator '%s': %zu\n", fname, num_arg);
 	return -1;
       }
       
@@ -370,7 +378,7 @@ static int VerifyFunc(struct ps_value_t **v, const char *ext, struct ps_value_t 
   for (count = 0; count < sizeof(func_prop)/sizeof(*func_prop); count++) {
     if (strcmp(fname, func_prop[count].name) == 0) {
       if (num_arg < func_prop[count].min_arg || num_arg > func_prop[count].max_arg) {
-	fprintf(stderr, "Incorrect number of args to func '%s'\n", fname);
+	fprintf(stderr, "Incorrect number of args to func '%s': %zu\n", fname, num_arg);
 	return -1;
       }
       
@@ -565,6 +573,8 @@ static enum expr_type_t NextAtom(const char **str, const char **end) {
 
   case '(':
   case ')':
+  case '[':
+  case ']':
   case '/':
   case '%':
   case '+':
@@ -603,7 +613,8 @@ static enum expr_type_t NextAtom(const char **str, const char **end) {
 
     if (len == 2) {
       if (strncmp(*str, "or", len) == 0 ||
-	  strncmp(*str, "if", len) == 0)
+	  strncmp(*str, "if", len) == 0 ||
+	  strncmp(*str, "in", len) == 0)
 	return e_operator;
     } else if (len == 3) {
       if (strncmp(*str, "and", len) == 0 ||
@@ -639,18 +650,20 @@ static int PushStackType(struct ps_value_t *stack, enum expr_type_t type, struct
 static int AddOper(struct ps_value_t *stack, struct ps_value_t *oper, enum expr_type_t prev_type, struct ps_value_t *prev, const char *ext, struct ps_value_t *dep) {
   size_t cur_level, level;
   int num_args, count;
+  const char *str;
   
   cur_level = PS_StackLength(stack);
-
+  str = PS_GetString(oper);
+  
 #ifdef DEBUG
-  printf("AddOper %s\n", PS_GetString(oper));
+  printf("AddOper %s\n", str);
 #endif
 
   /* Handle open parenthesis */
-  if (strcmp(PS_GetString(oper), "(") == 0) {
+  if (strcmp(str, "(") == 0 || strcmp(str, "[") == 0) {
     PS_FreeValue(oper);
-    if (prev_type != e_bareword && prev_type != e_operator && prev_type != e_init) {
-      fprintf(stderr, "Open parenthesis cannot follow %s\n", expr_name[prev_type]);
+    if ((prev_type != e_bareword || strcmp(str, "[") == 0) && prev_type != e_operator && prev_type != e_init) {
+      fprintf(stderr, "Open parenthesis/bracket cannot follow %s\n", expr_name[prev_type]);
       goto err;
     }
     
@@ -662,14 +675,14 @@ static int AddOper(struct ps_value_t *stack, struct ps_value_t *oper, enum expr_
 	  goto err;
       }
       
-      if (PS_OpenGrouping(stack, prev) < 0)
+      if (PS_OpenGrouping(stack, pg_paren, prev) < 0)
 	goto err;
       
       PS_FreeValue(prev);
       return 0;
     }
     
-    if (PS_OpenGrouping(stack, NULL) < 0)
+    if (PS_OpenGrouping(stack, strcmp(str, "[") == 0 ? pg_square : pg_paren, NULL) < 0)
       goto err;
     
     PS_FreeValue(prev);
@@ -773,7 +786,7 @@ static int AddOper(struct ps_value_t *stack, struct ps_value_t *oper, enum expr_
 
 static struct ps_value_t *ParseStr(const char *str, const char *ext, struct ps_value_t *dep) {
   struct ps_value_t *stack, *v, *prev;
-  const char *end;
+  const char *vstr, *end;
   enum expr_type_t prev_type, type;
   int was_func;
   
@@ -795,6 +808,7 @@ static struct ps_value_t *ParseStr(const char *str, const char *ext, struct ps_v
 
     if ((v = ParseAtom(type, str, &end)) == NULL)
       goto err3;
+    vstr = PS_GetString(v);
     
     if (type != e_operator) {
       if (prev_type != e_operator && prev_type != e_init) {
@@ -803,19 +817,19 @@ static struct ps_value_t *ParseStr(const char *str, const char *ext, struct ps_v
       }
       prev = v;
       v = NULL;
-    } else if (strcmp(PS_GetString(v), ")") == 0) {
-      PS_FreeValue(v);
-      v = NULL;
+    } else if (strcmp(vstr, ")") == 0 || strcmp(vstr, "]") == 0) {
       if (prev != NULL) {
 	if (PushStackType(stack, prev_type, prev, ext, dep) < 0)
 	  goto err3;
 	prev = NULL;
       }
-      if ((prev = PS_CloseGrouping(stack, 0, &was_func)) == NULL)
+      if ((prev = PS_CloseGrouping(stack, strcmp(vstr, "]") == 0 ? pg_square : pg_paren, &was_func)) == NULL)
 	goto err3;
       type = e_expr;
       if (was_func && VerifyFunc(&prev, ext, dep) < 0)
 	goto err3;
+      PS_FreeValue(v);
+      v = NULL;
     } else {
       if (AddOper(stack, v, prev_type, prev, ext, dep) < 0)
 	goto err2;
@@ -836,7 +850,7 @@ static struct ps_value_t *ParseStr(const char *str, const char *ext, struct ps_v
     goto err3;
   prev = NULL;
   
-  if ((v = PS_CloseGrouping(stack, 1, NULL)) == NULL)
+  if ((v = PS_CloseGrouping(stack, pg_base, NULL)) == NULL)
     goto err3;
   
   PS_FreeValue(stack);

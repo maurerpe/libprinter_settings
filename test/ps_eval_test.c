@@ -212,5 +212,11 @@ int main(void) {
   EvalTest2(v, "0", PS_NewFloat(-3.14), "1", PS_NewFloat(3));
   PS_FreeValue(v);
   
+  v = ParseTest("test in ['hi', 3]", "#global");
+  EvalTest(v, "#global", PS_NewInteger(3));
+  EvalTest(v, "#global", PS_NewString("hi"));
+  EvalTest(v, "#global", PS_NewString("not in list"));
+  PS_FreeValue(v);
+  
   return 0;
 }

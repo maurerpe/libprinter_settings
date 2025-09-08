@@ -334,9 +334,39 @@ struct ps_value_t *PS_CtxLookupAll(struct ps_context_t *ctx, const char *name) {
   return NULL;
 }
 
+struct ps_value_t *PS_CtxFirstTrue(struct ps_context_t *ctx, const char *name) {
+  struct ps_value_t *v = NULL;
+  struct ps_value_iterator_t *vi;
+  
+  if ((vi = PS_NewValueIterator(ctx->dflt)) == NULL)
+    goto err;
+
+  if (!PS_ValueIteratorNext(vi))
+    goto err2;
+  
+  while (PS_ValueIteratorNext(vi)) {
+    if (PS_AsBoolean(RawLookup(ctx, PS_ValueIteratorKey(vi), name, 0))) {
+      v = PS_NewString(PS_ValueIteratorKey(vi));
+      break;
+    }
+  }
+  
+  PS_FreeValueIterator(vi);
+  if (v == NULL) {
+    fprintf(stderr, "Warning: No suitable extruder found, returning extruder '0'\n");
+    v = PS_NewString("0");
+  }
+  return v;
+  
+ err2:
+  PS_FreeValueIterator(vi);
+ err:
+  return NULL;
+}
+
 int PS_CtxPush(struct ps_context_t *ctx, const char *ext) {
   struct list_t *list;
-
+  
   if ((list = NewList(ext)) == NULL)
     goto err;
 

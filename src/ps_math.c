@@ -94,6 +94,13 @@ struct ps_value_t *PS_Call2(const ps_func_t func, const struct ps_value_t *v1, c
   return NULL;
 }
 
+static void CombineTypes(enum ps_type_t *type, enum ps_type_t tt) {
+  if (tt == t_null ||
+      (*type == t_string && tt >= t_boolean) ||
+      (*type != t_string && tt > *type))
+    *type = tt;
+}
+
 static ssize_t VerifyArgs(const struct ps_value_t *v, size_t min, size_t max, enum ps_type_t *type) {
   size_t len, count;
   enum ps_type_t tt;
@@ -116,10 +123,7 @@ static ssize_t VerifyArgs(const struct ps_value_t *v, size_t min, size_t max, en
       *type = PS_GetType(PS_GetItem(v, 0));
       for (count = 1; count < len; count++) {
 	tt = PS_GetType(PS_GetItem(v, count));
-	if (tt == t_null ||
-	    (*type == t_string && tt >= t_boolean) ||
-	    (*type != t_string && tt > *type))
-	  *type = tt;
+	CombineTypes(type, tt);
       }
     }
   }
@@ -133,6 +137,7 @@ static ssize_t VerifyArgs(const struct ps_value_t *v, size_t min, size_t max, en
 #define CALL1(func, modfunc) (func(modfunc(PS_GetItem(v, 0))))
 #define CALL2(func, modfunc) (func(modfunc(PS_GetItem(v, 0)),modfunc(PS_GetItem(v, 1))))
 #define INFIX(op, modfunc) ((modfunc(PS_GetItem(v, 0))) op (modfunc(PS_GetItem(v, 1))))
+#define INFIXAB(op, modfunc) ((modfunc(va)) op (modfunc(vb)))
 
 #define NUM_FUNC(name, intr, floatr)			\
   struct ps_value_t * name (const struct ps_value_t *v) {	\
@@ -342,45 +347,17 @@ CMP_FUNC(PS_GT, >)
 CMP_FUNC(PS_LE, <=)
 CMP_FUNC(PS_GE, >=)
 
-static int PS_EqRaw(const struct ps_value_t *v);
-
-static int PS_EqCall(const struct ps_value_t *va, const struct ps_value_t *vb) {
-  struct ps_value_t *list, *c;
-  int ret;
-  
-  if ((list = PS_NewList()) == NULL)
-    goto err;
-  
-  if ((c = PS_AddRef(va)) == NULL)
-    goto err2;    
-  if (PS_AppendToList(list, c) < 0)
-    goto err3;
-  
-  if ((c = PS_AddRef(vb)) == NULL)
-    goto err2;
-  if (PS_AppendToList(list, c) < 0)
-    goto err3;
-  
-  ret = PS_EqRaw(list);
-  PS_FreeValue(list);
-  
-  return ret;
-
- err3:
-  PS_FreeValue(c);
- err2:
-  PS_FreeValue(list);
- err:
-  return -1;
-}
+static int PS_EqRawAB(const struct ps_value_t *va, const struct ps_value_t *vb);
 
 static int PS_EqList(const struct ps_value_t *va, const struct ps_value_t *vb) {
   size_t count, len;
   int ret;
   
   len = PS_ItemCount(va);
+  if (PS_ItemCount(vb) != len)
+    return 0;
   for (count = 0; count < len; count++) {
-    ret = PS_EqCall(PS_GetItem(va, count), PS_GetItem(vb, count));
+    ret = PS_EqRawAB(PS_GetItem(va, count), PS_GetItem(vb, count));
     
     if (ret < 1)
       return ret;
@@ -392,7 +369,12 @@ static int PS_EqList(const struct ps_value_t *va, const struct ps_value_t *vb) {
 static int PS_EqObject(const struct ps_value_t *va, const struct ps_value_t *vb) {
   struct ps_value_iterator_t *via, *vib;
   int ret = -1;
-
+  
+  if (PS_ItemCount(va) != PS_ItemCount(vb)) {
+    ret = 0;
+    goto err;
+  }
+  
   if ((via = PS_NewValueIterator(va)) == NULL)
     goto err;
 
@@ -400,7 +382,7 @@ static int PS_EqObject(const struct ps_value_t *va, const struct ps_value_t *vb)
     goto err2;
 
   while (PS_ValueIteratorNext(via) && PS_ValueIteratorNext(vib)) {
-    ret = PS_EqCall(PS_ValueIteratorData(via), PS_ValueIteratorData(vib));
+    ret = PS_EqRawAB(PS_ValueIteratorData(via), PS_ValueIteratorData(vib));
     
     if (ret < 1)
       goto err3;
@@ -417,41 +399,50 @@ static int PS_EqObject(const struct ps_value_t *va, const struct ps_value_t *vb)
   return ret;
 }
 
-static int PS_EqRaw(const struct ps_value_t *v) {
-  enum ps_type_t type;
+static int PS_EqRawAB(const struct ps_value_t *va, const struct ps_value_t *vb) {
+  enum ps_type_t ta, tb, type;
   
-  if (VerifyArgs(v, 2, 2, &type) < 0)
-    return -1;
-  
+  ta = PS_GetType(va);
+  tb = PS_GetType(vb);
+  type = ta;
+  CombineTypes(&type, tb);
+
   switch (type) {
   case t_null:
-    return INFIX(==, PS_GetType);
-    
+    return ta == tb;
+
   case t_boolean:
-    return INFIX(==, PS_AsBoolean);
-    
+    return INFIXAB(==, PS_AsBoolean);
+
   case t_integer:
-    return INFIX(==, PS_AsInteger);
-    
+    return INFIXAB(==, PS_AsInteger);
+
   case t_float:
-    return INFIX(==, PS_AsFloat);
-    
+    return INFIXAB(==, PS_AsFloat);
+
   case t_string:
   case t_variable:
   case t_builtin_func:
-    return INFIX(==, PS_GetType) && CALL2(strcmp, PS_GetString) == 0;
+    return ta == tb && strcmp(PS_GetString(va), PS_GetString(vb)) == 0;
 
   case t_list:
   case t_function:
-    return INFIX(==, PS_GetType) && INFIX(==, PS_ItemCount) && PS_EqList(PS_GetItem(v, 0), PS_GetItem(v, 1));
+    return ta == tb && PS_EqList(va, vb);
 
   case t_object:
-    return INFIX(==, PS_GetType) && INFIX(==, PS_ItemCount) && PS_EqObject(PS_GetItem(v, 0), PS_GetItem(v, 1));
-    
+    return ta == tb && PS_EqObject(va, vb);
+
   default:
     fprintf(stderr, "Wrong type args to function PS_EQ\n");
     return -1;
   }
+}
+
+static int PS_EqRaw(const struct ps_value_t *v) {
+  if (VerifyArgs(v, 2, 2, NULL) < 0)
+    return -1;
+  
+  return PS_EqRawAB(PS_GetItem(v, 0), PS_GetItem(v, 1));
 }
 
 struct ps_value_t *PS_EQ(const struct ps_value_t *v) {
@@ -483,8 +474,8 @@ struct ps_value_t *PS_Not(const struct ps_value_t *v) {
     return PS_NewBoolean(!PS_AsBoolean(PS_GetItem(v, 0)));
     
   default:
-      fprintf(stderr, "Wrong type args to function PS_Not\n");
-      return NULL;
+    fprintf(stderr, "Wrong type args to function PS_Not\n");
+    return NULL;
   }
 }
 
@@ -499,8 +490,8 @@ struct ps_value_t *PS_Or(const struct ps_value_t *v) {
     return PS_NewBoolean(INFIX(||, PS_AsBoolean));
     
   default:
-      fprintf(stderr, "Wrong type args to function PS_Or\n");
-      return NULL;
+    fprintf(stderr, "Wrong type args to function PS_Or\n");
+    return NULL;
   }
 }
 
@@ -515,9 +506,36 @@ struct ps_value_t *PS_And(const struct ps_value_t *v) {
     return PS_NewBoolean(INFIX(&&, PS_AsBoolean));
     
   default:
-      fprintf(stderr, "Wrong type args to function PS_And\n");
-      return NULL;
+    fprintf(stderr, "Wrong type args to function PS_And\n");
+    return NULL;
   }
+}
+
+struct ps_value_t *PS_In(const struct ps_value_t *v) {
+  const struct ps_value_t *val, *list;
+  size_t len, count;
+  int ret;
+  
+  if (VerifyArgs(v, 2, 2, NULL) < 0)
+    return NULL;
+  
+  val = PS_GetItem(v, 0);
+  list = PS_GetItem(v, 1);
+  if (PS_GetType(list) != t_list) {
+    fprintf(stderr, "Second argument to infix operator 'in' must be a list\n");
+    return NULL;
+  }
+  
+  len = PS_ItemCount(list);
+  for (count = 0; count < len; count++) {
+    if ((ret = PS_EqRawAB(val, PS_GetItem(list, count))) < 0)
+      return NULL;
+    
+    if (ret)
+      return PS_NewBoolean(1);
+  }
+  
+  return PS_NewBoolean(0);  
 }
 
 #define FLOAT1_FUNC(name, floatr)			\
@@ -670,7 +688,7 @@ struct ps_value_t *PS_Max(const struct ps_value_t *v) {
   enum ps_type_t type;
   ssize_t len;
   
-  if ((len = VerifyArgs(v, 1, 2, &type)) < 0)
+  if ((len = VerifyArgs(v, 1, SIZE_MAX, &type)) < 0)
     return NULL;
   
   switch (type) {
@@ -678,14 +696,12 @@ struct ps_value_t *PS_Max(const struct ps_value_t *v) {
   case t_integer:
   case t_float:
   case t_string:
-    if (len != 2) {
-      fprintf(stderr, "Wrong number args to function PS_Max\n");
-      return NULL;
-    }
+    if (len != 2)
+      return Reduce(PS_Max, v);
     
     if ((bb = PS_GE(v)) == NULL)
       return NULL;
-
+    
     ret = PS_CopyValue(PS_GetItem(v, PS_AsBoolean(bb) ? 0 : 1));
     PS_FreeValue(bb);
     
@@ -710,7 +726,7 @@ struct ps_value_t *PS_Min(const struct ps_value_t *v) {
   enum ps_type_t type;
   ssize_t len;
   
-  if ((len = VerifyArgs(v, 1, 2, &type)) < 0)
+  if ((len = VerifyArgs(v, 1, SIZE_MAX, &type)) < 0)
     return NULL;
   
   switch (type) {
@@ -718,10 +734,8 @@ struct ps_value_t *PS_Min(const struct ps_value_t *v) {
   case t_integer:
   case t_float:
   case t_string:
-    if (len != 2) {
-      fprintf(stderr, "Wrong number args to function PS_Min\n");
-      return NULL;
-    }
+    if (len != 2)
+      return Reduce(PS_Min, v);
     
     if ((bb = PS_LE(v)) == NULL)
       return NULL;
@@ -889,4 +903,19 @@ struct ps_value_t *PS_ExtruderValues(const struct ps_value_t *v, struct ps_conte
     return NULL;
 
   return PS_CtxLookupAll(ctx, PS_GetString(arg));
+}
+
+struct ps_value_t *PS_AnyExt(const struct ps_value_t *v, struct ps_context_t *ctx) {
+  const struct ps_value_t *arg;
+  
+  if (v == NULL || PS_GetType(v) != t_function || PS_ItemCount(v) != 2)
+    return NULL;
+
+  if ((arg = PS_GetItem(v, 1)) == NULL)
+    return NULL;
+  
+  if (PS_GetType(arg) != t_variable)
+    return NULL;
+
+  return PS_CtxFirstTrue(ctx, PS_GetString(arg));
 }

@@ -153,16 +153,24 @@ struct ps_value_t *PS_CollapseStack(struct ps_value_t *stack, ssize_t new_level)
   return NULL;
 }
 
-int PS_OpenGrouping(struct ps_value_t *stack, const struct ps_value_t *func) {
+int PS_OpenGrouping(struct ps_value_t *stack, enum ps_grouping_t grp, const struct ps_value_t *func) {
   struct ps_value_t *a, *b;
+  
+  if (grp == pg_base)
+    goto err;
   
   if ((a = PS_NewList()) == NULL)
     goto err;
   
-  if (func)
+  if (func) {
+    if (grp != pg_paren) {
+      fprintf(stderr, "Function call must start with open parenthesis\n");
+      goto err2;
+    }
     b = PS_NewFunction(func);
-  else
+  } else {
     b = PS_NewList();
+  }
   if (b == NULL)
     goto err2;
   
@@ -183,10 +191,10 @@ int PS_OpenGrouping(struct ps_value_t *stack, const struct ps_value_t *func) {
   return -1;
 }
 
-struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, int final, int *was_func) {
+struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, enum ps_grouping_t grp, int *was_func) {
   struct ps_value_t *expr, *v;
 
-  if (final) {
+  if (grp == pg_base) {
     if (PS_ItemCount(stack) != 1) {
       fprintf(stderr, "Not enough close parenthesis\n");
       goto err;
@@ -203,6 +211,10 @@ struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, int final, int *wa
   
   PRINT_VALUE("Close grouping stack", stack);
   if (PS_GetType(expr) == t_function) {
+    if (grp == pg_square) {
+      fprintf(stderr, "Must end function argument list with close parenthesis\n");
+      goto err2;
+    }
     if (was_func)
       *was_func = 1;
     return expr;
@@ -211,8 +223,11 @@ struct ps_value_t *PS_CloseGrouping(struct ps_value_t *stack, int final, int *wa
   if (was_func)
     *was_func = 0;
   
+  if (grp == pg_square)
+    return expr;
+  
   if (PS_ItemCount(expr) != 1) {
-    if (final)
+    if (grp == pg_base)
       fprintf(stderr, "Base expression must contain exactly one argument\n");
     else
       fprintf(stderr, "Parenthetical expressions must contain exactly one argument\n");
